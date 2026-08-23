@@ -364,6 +364,7 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
         <label>返回格式<select id="aiImageFormat"><option value="b64_json">b64_json（本地保存）</option><option value="url">url（外链）</option><option value="">不设置（由 API 决定）</option></select></label>
         <label>尺寸<select id="aiImageSize"><option>1024x1024</option><option>1536x1024</option><option>1024x1536</option><option>1792x1024</option><option>1024x1792</option></select></label>
       </div>
+      <div class="dp-btns" style="margin-top:6px"><button type="button" class="mini" data-ai-test="image">🔌 测试连接</button><button type="button" class="mini" data-ai-reset="image">恢复默认</button><label style="display:flex;align-items:center;gap:4px;font-size:12px;margin-left:6px"><input type="checkbox" data-ai-eye="aiImageKey"> 显示 Key</label></div>
     </div>
     <div class="insp-sec">
       <h4>🎥 视频生成 API</h4>
@@ -375,6 +376,7 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
         <label>尺寸<select id="aiVideoSize"><option>1280x720</option><option>1920x1080</option><option>1024x1792</option><option>1792x1024</option></select></label>
         <label>应用到<select id="aiVideoTarget"><option value="sceneVideo">当前场景 CG 动画</option></select></label>
       </div>
+      <div class="dp-btns" style="margin-top:6px"><button type="button" class="mini" data-ai-test="video">🔌 测试连接</button><button type="button" class="mini" data-ai-reset="video">恢复默认</button><label style="display:flex;align-items:center;gap:4px;font-size:12px;margin-left:6px"><input type="checkbox" data-ai-eye="aiVideoKey"> 显示 Key</label></div>
     </div>
     <div class="insp-sec">
       <h4>📝 文本生成 API</h4>
@@ -384,6 +386,7 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
         <label>模型<input id="aiTextModel" type="text" placeholder="gpt-4o-mini / deepseek-chat" spellcheck="false"></label>
         <label>路径<input id="aiTextPath" type="text" placeholder="/chat/completions" spellcheck="false"></label>
       </div>
+      <div class="dp-btns" style="margin-top:6px"><button type="button" class="mini" data-ai-test="text">🔌 测试连接</button><button type="button" class="mini" data-ai-reset="text">恢复默认</button><label style="display:flex;align-items:center;gap:4px;font-size:12px;margin-left:6px"><input type="checkbox" data-ai-eye="aiTextKey"> 显示 Key</label></div>
     </div>
     <div class="insp-sec">
       <h4>🎨 AI 生图</h4>
@@ -1006,45 +1009,48 @@ const UI_PRESETS={
   paper:()=>({textbox:{show:true,x:50,y:94,w:82,opacity:0.95,bg:'#FFF7E6',border:'#D4A373',radius:6,fontColor:'#5C4033',fontSize:18,lineHeight:1.8},speaker:{show:true,offsetX:0,offsetY:0,scale:1,bg:'#D4A373',color:'#FFFFFF',radius:4,fontSize:14},choices:{show:true,x:50,y:36,w:60,opacity:0.95,bg:'#FFF7E6',border:'#D4A373',color:'#5C4033',radius:6,fontSize:16},hint:{show:1}}),
   minimal:()=>({textbox:{show:true,x:50,y:94,w:78,opacity:0.98,bg:'#111111',border:'#333333',radius:2,fontColor:'#FFFFFF',fontSize:17,lineHeight:1.7},speaker:{show:false,offsetX:0,offsetY:0,scale:1,bg:'#111111',color:'#FFFFFF',radius:2,fontSize:13},choices:{show:true,x:50,y:36,w:56,opacity:0.98,bg:'#111111',border:'#FFFFFF',color:'#FFFFFF',radius:2,fontSize:15},hint:{show:false}})
 };
+function uiSliderNumberHTML(id,valId,label,val,min,max,step){
+  return `<div class="dp-row"><label>${label} <span class="dp-val" id="${valId}">${val}</span></label><div style="display:flex;gap:6px;align-items:center"><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}" style="flex:1"><input type="number" id="${id}Num" value="${val}" min="${min}" max="${max}" step="${step}" style="width:80px"></div></div>`;
+}
 function uiSettingsHTML(){
   const u=project.ui||defaultUILayout();
   return `
   <details class="insp-sec" open><summary>💬 文本框</summary>
     ${uiCheckboxHTML('uiTbShow','显示文本框',u.textbox.show)}
-    ${uiSliderHTML('uiTbX','uiTbXVal','水平位置 X',u.textbox.x,0,100,0.5)}
-    ${uiSliderHTML('uiTbY','uiTbYVal','垂直位置 Y（底边）',u.textbox.y,0,100,0.5)}
-    ${uiSliderHTML('uiTbW','uiTbWVal','宽度 %',u.textbox.w,10,100,0.5)}
-    ${uiSliderHTML('uiTbOpacity','uiTbOpacityVal','背景不透明度',u.textbox.opacity,0,1,0.05)}
+    ${uiSliderNumberHTML('uiTbX','uiTbXVal','水平位置 X',u.textbox.x,0,100,0.5)}
+    ${uiSliderNumberHTML('uiTbY','uiTbYVal','垂直位置 Y（底边）',u.textbox.y,0,100,0.5)}
+    ${uiSliderNumberHTML('uiTbW','uiTbWVal','宽度 %',u.textbox.w,10,100,0.5)}
+    ${uiSliderNumberHTML('uiTbOpacity','uiTbOpacityVal','背景不透明度',u.textbox.opacity,0,1,0.05)}
     ${uiColorHTML('uiTbBg','背景色',u.textbox.bg)}
     ${uiColorHTML('uiTbBorder','边框色',u.textbox.border)}
-    ${uiSliderHTML('uiTbRadius','uiTbRadiusVal','圆角',u.textbox.radius,0,30,1)}
+    ${uiSliderNumberHTML('uiTbRadius','uiTbRadiusVal','圆角',u.textbox.radius,0,30,1)}
     ${uiColorHTML('uiTbFontColor','文字颜色',u.textbox.fontColor)}
-    ${uiSliderHTML('uiTbFontSize','uiTbFontSizeVal','字号',u.textbox.fontSize,10,36,1)}
-    ${uiSliderHTML('uiTbLineHeight','uiTbLineHeightVal','行高',u.textbox.lineHeight,1.2,2.5,0.05)}
+    ${uiSliderNumberHTML('uiTbFontSize','uiTbFontSizeVal','字号',u.textbox.fontSize,10,36,1)}
+    ${uiSliderNumberHTML('uiTbLineHeight','uiTbLineHeightVal','行高',u.textbox.lineHeight,1.2,2.5,0.05)}
     <button type="button" class="mini danger" data-uireset="textbox">重置本组件</button>
   </details>
   <details class="insp-sec"><summary>🏷 角色名牌</summary>
     ${uiCheckboxHTML('uiSpShow','显示角色名牌',u.speaker.show)}
-    ${uiSliderHTML('uiSpX','uiSpXVal','水平偏移(px)',u.speaker.offsetX,-80,80,1)}
-    ${uiSliderHTML('uiSpY','uiSpYVal','垂直偏移(px)',u.speaker.offsetY,-80,80,1)}
-    ${uiSliderHTML('uiSpScale','uiSpScaleVal','缩放',u.speaker.scale,0.5,1.5,0.05)}
+    ${uiSliderNumberHTML('uiSpX','uiSpXVal','水平偏移(px)',u.speaker.offsetX,-80,80,1)}
+    ${uiSliderNumberHTML('uiSpY','uiSpYVal','垂直偏移(px)',u.speaker.offsetY,-80,80,1)}
+    ${uiSliderNumberHTML('uiSpScale','uiSpScaleVal','缩放',u.speaker.scale,0.5,1.5,0.05)}
     ${uiColorHTML('uiSpBg','背景色',u.speaker.bg)}
     ${uiColorHTML('uiSpColor','文字颜色',u.speaker.color)}
-    ${uiSliderHTML('uiSpRadius','uiSpRadiusVal','圆角',u.speaker.radius,0,30,1)}
-    ${uiSliderHTML('uiSpFontSize','uiSpFontSizeVal','字号',u.speaker.fontSize,10,24,1)}
+    ${uiSliderNumberHTML('uiSpRadius','uiSpRadiusVal','圆角',u.speaker.radius,0,30,1)}
+    ${uiSliderNumberHTML('uiSpFontSize','uiSpFontSizeVal','字号',u.speaker.fontSize,10,24,1)}
     <button type="button" class="mini danger" data-uireset="speaker">重置本组件</button>
   </details>
   <details class="insp-sec"><summary>🔘 选项区</summary>
     ${uiCheckboxHTML('uiChShow','显示选项区',u.choices.show)}
-    ${uiSliderHTML('uiChX','uiChXVal','水平位置 X',u.choices.x,0,100,0.5)}
-    ${uiSliderHTML('uiChY','uiChYVal','垂直位置 Y',u.choices.y,0,100,0.5)}
-    ${uiSliderHTML('uiChW','uiChWVal','宽度 %',u.choices.w,10,100,0.5)}
-    ${uiSliderHTML('uiChOpacity','uiChOpacityVal','不透明度',u.choices.opacity,0,1,0.05)}
+    ${uiSliderNumberHTML('uiChX','uiChXVal','水平位置 X',u.choices.x,0,100,0.5)}
+    ${uiSliderNumberHTML('uiChY','uiChYVal','垂直位置 Y',u.choices.y,0,100,0.5)}
+    ${uiSliderNumberHTML('uiChW','uiChWVal','宽度 %',u.choices.w,10,100,0.5)}
+    ${uiSliderNumberHTML('uiChOpacity','uiChOpacityVal','不透明度',u.choices.opacity,0,1,0.05)}
     ${uiColorHTML('uiChBg','按钮背景色',u.choices.bg)}
     ${uiColorHTML('uiChBorder','按钮边框色',u.choices.border)}
     ${uiColorHTML('uiChColor','按钮文字色',u.choices.color)}
-    ${uiSliderHTML('uiChRadius','uiChRadiusVal','按钮圆角',u.choices.radius,0,30,1)}
-    ${uiSliderHTML('uiChFontSize','uiChFontSizeVal','按钮字号',u.choices.fontSize,10,30,1)}
+    ${uiSliderNumberHTML('uiChRadius','uiChRadiusVal','按钮圆角',u.choices.radius,0,30,1)}
+    ${uiSliderNumberHTML('uiChFontSize','uiChFontSizeVal','按钮字号',u.choices.fontSize,10,30,1)}
     <button type="button" class="mini danger" data-uireset="choices">重置本组件</button>
   </details>
   <details class="insp-sec"><summary>👆 点击提示</summary>
@@ -1075,8 +1081,11 @@ function renderUIPreview(){
   if(hint){hint.style.display=u.hint.show?'block':'none';}
 }
 function bindEditorUIRange(id,valId,obj,key){
-  const el=$(id);if(!el)return;
-  el.oninput=()=>{obj[key]=parseFloat(el.value)||0;updateDemoLabel(valId,obj[key]);renderUIPreview();saveEditor();};
+  const el=$(id),num=$(id+'Num');if(!el)return;
+  const min=parseFloat(el.min||0),max=parseFloat(el.max||100);
+  const apply=v=>{let n=parseFloat(v);if(isNaN(n))n=min;n=Math.max(min,Math.min(max,n));obj[key]=n;updateDemoLabel(valId,n);renderUIPreview();saveEditor();};
+  el.oninput=()=>{const n=parseFloat(el.value);if(num)num.value=n;apply(n);};
+  if(num)num.oninput=()=>{const n=parseFloat(num.value);if(el)el.value=n;apply(n);};
 }
 function bindEditorUIColor(id,obj,key){
   const el=$(id);if(!el)return;
@@ -1150,6 +1159,46 @@ function openUIModal(){
 }
 function closeUIModal(){saveEditor();$('#uiModal').classList.add('hidden');}
 
+function aiToggleEye(id){
+  const el=$(id);if(el)el.type=el.type==='password'?'text':'password';
+}
+async function aiTestConnection(kind){
+  const s=saveAiSettings();
+  const map={image:['imageBaseUrl','imageKey'],video:['videoBaseUrl','videoKey'],text:['textBaseUrl','textKey']};
+  const keys=map[kind]||map.text;
+  const base=(s[keys[0]]||'').replace(/\/+$/,'');
+  const key=s[keys[1]]||'';
+  if(!base){toast('请先填写 Base URL');return;}
+  const btn=$('[data-ai-test="'+kind+'"]');
+  if(btn)btn.disabled=true;
+  try{
+    const res=await fetch(base+'/models',{headers:key?{'Authorization':'Bearer '+key}:{}});
+    const t=await res.text();
+    if(res.ok){toast('✅ '+kind+' API 连接成功');}
+    else{toast('❌ '+kind+' API 连接失败：'+res.status+' '+(t.slice(0,160)));}
+  }catch(e){
+    toast('❌ '+kind+' API 连接失败：'+e.message+'（请检查 Base URL / 网络 / CORS）');
+  }finally{if(btn)btn.disabled=false;}
+}
+function aiResetConfig(kind){
+  const s=getAiSettings();
+  if(kind==='image'){
+    s.imageBaseUrl='https://api.openai.com/v1';s.imageModel='gpt-image-1';s.imagePath='/images/generations';s.imageFormat='b64_json';s.imageSize='1024x1024';
+  }else if(kind==='video'){
+    s.videoBaseUrl='https://api.openai.com/v1';s.videoModel='sora-2';s.videoPath='/videos/generations';s.videoSize='1280x720';
+  }else{
+    s.textBaseUrl='https://api.openai.com/v1';s.textModel='gpt-4o-mini';s.textPath='/chat/completions';
+  }
+  try{localStorage.setItem(aiSaveKey,JSON.stringify(s));}catch(e){}
+  fillAiSettings();
+  toast('已恢复该 API 默认配置（Key 已保留）');
+}
+function bindAiConfigActions(){
+  $$('[data-ai-eye]').forEach(box=>{box.onchange=()=>aiToggleEye(box.dataset.aiEye);});
+  $$('[data-ai-test]').forEach(btn=>{btn.onclick=()=>aiTestConnection(btn.dataset.aiTest);});
+  $$('[data-ai-reset]').forEach(btn=>{btn.onclick=()=>aiResetConfig(btn.dataset.aiReset);});
+}
+function openAiModal(){fillAiSettings();bindAiConfigActions();renderAiCharSels();$('#aiImgResult').innerHTML='';$('#aiVideoResult').innerHTML='';$('#aiTextResult').value='';$('#aiModal').classList.remove('hidden');}
 function renderAiCharSels(){
   const target=$('#aiImgTarget').value;
   const charSel=$('#aiCharSel'),actSel=$('#aiActSel');
