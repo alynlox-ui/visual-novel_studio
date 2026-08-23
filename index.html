@@ -34,6 +34,7 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
 .panel-head{padding:12px 12px 6px;font-weight:700;display:flex;justify-content:space-between;align-items:center;color:#18191C}
 .panel-sub{padding:4px 12px 8px;display:flex;align-items:center;gap:6px;font-size:12px;color:#61666D}
 .panel-sub select{flex:1;padding:4px 6px}
+.panel-stats{padding:8px 12px;border-top:1px solid #E3E5E7;font-size:12px;color:#61666D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #sceneList{flex:1;overflow-y:auto;padding:0 8px 12px}
 .scene-item{display:flex;align-items:center;gap:6px;background:#FFFFFF;border:1px solid #E3E5E7;border-radius:9px;padding:9px 10px;margin-bottom:6px;cursor:pointer;transition:.12s}
 .scene-item:hover{border-color:#FB7299}
@@ -219,12 +220,14 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
     <button id="btnExport">导出 JSON</button>
     <button id="btnImport">导入 JSON</button>
     <button id="btnPlay" class="primary">▶ 运行测试</button>
+    <button id="btnPlayScene" title="从当前选中的场景开始测试">▶ 测试当前场景</button>
   </header>
   <div class="editor-main">
     <aside id="scenePanel">
       <div class="panel-head">📑 场景列表 <button id="btnAddScene" class="mini primary">＋ 新建</button></div>
       <div class="panel-sub">起点：<select id="startSceneSel"></select></div>
       <div id="sceneList"></div>
+      <div id="sceneStats" class="panel-stats" title=""></div>
     </aside>
     <div id="canvasWrap">
       <svg id="flowSvg">
@@ -327,6 +330,15 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
     <div id="flagsList"></div>
     <button id="btnAddFlag" class="mini primary">＋ 添加数值</button>
     <div class="modal-actions"><button id="btnFlagsClose" class="primary">完成</button></div>
+  </div>
+</div>
+<!-- 批量导入台词模态 -->
+<div id="importDlgModal" class="modal hidden">
+  <div class="modal-box" style="width:min(680px,96vw)">
+    <h3>📋 从文本批量导入台词</h3>
+    <p class="hint">每行一句；格式：<b>说话人：台词</b> 或 <b>说话人: 台词</b>。没有冒号则整行作为旁白。</p>
+    <textarea id="importDlgText" rows="12" placeholder="小夜：今天也一起回家吧。&#10;你：嗯，好呀。&#10;旁白：黄昏把两人的影子拉得很长。"></textarea>
+    <div class="modal-actions"><button id="btnImportDlgCancel">取消</button><button id="btnImportDlgReplace" class="danger">替换当前对话</button><button id="btnImportDlgAppend" class="primary">追加到当前对话</button></div>
   </div>
 </div>
 <!-- UI 设置模态 -->
@@ -539,6 +551,7 @@ function persistEditorDraft(){
     draftInfo.savedAt=new Date().toISOString();
     localStorage.setItem(editorSaveKey,JSON.stringify({app:editorDraftApp,version:1,project:project,selectedSceneId:selectedSceneId,savedAt:draftInfo.savedAt}));
     updateDraftStatus();
+    renderSceneStats();
     return true;
   }catch(e){
     console.warn('草稿保存失败:',e);
@@ -587,7 +600,7 @@ function loadEditor(){
   project=migrateProject(sampleProject());selectedSceneId=project.startScene;draftInfo.restored=false;draftInfo.savedAt=null;
 }
 /* ---------------- 编辑器渲染 ---------------- */
-function renderAll(){renderSceneList();renderInspector();renderFlow();renderStartSel();}
+function renderAll(){renderSceneList();renderInspector();renderFlow();renderStartSel();renderSceneStats();}
 function renderStartSel(){
   const sel=$('#startSceneSel');if(!sel)return;
   sel.innerHTML=(project.scenes.map(s=>`<option value="${esc(s.id)}" ${s.id===project.startScene?'selected':''}>${esc(s.name||s.id)}</option>`).join(''))||'<option value="">（无场景）</option>';
@@ -602,6 +615,7 @@ function renderSceneList(){
     el.onclick=()=>{selectedSceneId=s.id;renderSceneList();renderInspector();renderFlow();};
     box.appendChild(el);
   });
+  renderSceneStats();
 }
 function condBoxHTML(role,idx,owner,val,flags){
   return `<div class="cond-box">
@@ -681,7 +695,7 @@ function inspectorHTML(){
       <textarea rows="2" data-role="dialogueText" data-idx="${i}" placeholder="台词…">${esc(d.text)}</textarea>
     </div>`).join('')}
     ${(sc.dialogues&&sc.dialogues.length)?'':`<textarea rows="3" data-field="text" placeholder="单条文本……">${esc(sc.text)}</textarea><p class="hint">${sc.text?'当前为单条文本模式，可点击下方按钮转为多组对话。':'暂无对话内容：可直接填写上方单条文本，或添加多组对话。'}</p>`}
-    <div class="dp-btns"><button class="mini primary" data-role="addDialogue">＋ 添加对话</button>${(!sc.dialogues||!sc.dialogues.length)&&sc.text?`<button class="mini" data-role="convertDialogue">把当前单条文本转为多组对话</button>`:''}</div>
+    <div class="dp-btns"><button class="mini primary" data-role="addDialogue">＋ 添加对话</button><button class="mini" data-role="importDialogues">📋 批量导入</button>${(!sc.dialogues||!sc.dialogues.length)&&sc.text?`<button class="mini" data-role="convertDialogue">把当前单条文本转为多组对话</button>`:''}</div>
     <div class="chips">${flags.length?flags.map(f=>`<button type="button" class="chip" data-insert="{${esc(f)}}">{${esc(f)}}</button>`).join(''):''}<span class="hint">点击数值可插入变量，如 {小夜好感}，播放时自动替换。</span></div>
     <p class="hint">多组对话按顺序播放；全部播完后进入选项 / 自动分支 / 下一场景。可指定演出角色与动作；未指定演出角色时，自动匹配说话人并高亮对应立绘，其余立绘压暗。</p>
   </div>
@@ -981,6 +995,48 @@ function insertAtCursor(input,text){
   input.value=input.value.slice(0,s)+text+input.value.slice(e);
   input.selectionStart=input.selectionEnd=s+text.length;
   input.dispatchEvent(new Event('input',{bubbles:true}));
+}
+/* ---------------- 批量导入台词 / 统计 ---------------- */
+function openImportDialogues(){
+  const sc=selectedScene();if(!sc){toast('请先在左侧选择一个场景');return;}
+  $('#importDlgText').value='';
+  $('#importDlgModal').classList.remove('hidden');
+}
+function parseDialogueText(text){
+  const out=[];
+  (String(text||'').split(/\n/)).forEach(line=>{
+    line=line.replace(/\r$/,'').trim();if(!line)return;
+    const m=line.match(/^([^：:]{1,20})[：:]([\s\S]*)$/);
+    if(m&&m[1].trim()){out.push({id:uid('d'),speaker:m[1].trim(),text:(m[2]||'').trim(),charId:'',actionId:''});}
+    else{out.push({id:uid('d'),speaker:'',text:line,charId:'',actionId:''});}
+  });
+  return out;
+}
+function importDialogues(mode){
+  const sc=selectedScene();if(!sc){toast('请先选择场景');return;}
+  const arr=parseDialogueText($('#importDlgText').value);
+  if(!arr.length){toast('没有解析到台词');return;}
+  sc.dialogues=sc.dialogues||[];
+  if(mode==='replace'){sc.dialogues=arr;sc.text='';}
+  else{arr.forEach(d=>sc.dialogues.push(d));}
+  $('#importDlgModal').classList.add('hidden');
+  renderInspector();saveEditor();
+  toast('已'+(mode==='replace'?'替换':'追加')+' '+arr.length+' 句台词');
+}
+function renderSceneStats(){
+  const el=$('#sceneStats');if(!el)return;
+  if(!project||!project.scenes){el.textContent='';return;}
+  let lines=0,words=0,choices=0,endings=0,flags=Object.keys(project.flags||{}).length,videos=0;
+  (project.scenes||[]).forEach(sc=>{
+    const dlg=(sc.dialogues&&sc.dialogues.length)?sc.dialogues:(sc.text&&sc.text.trim()?[{speaker:sc.speaker||'',text:sc.text}]:[]);
+    lines+=dlg.length;
+    dlg.forEach(d=>{words+=(d.text||'').replace(/\s/g,'').length;});
+    choices+=(sc.choices||[]).length;
+    if(sc.ending)endings++;
+    if(sc.video)videos++;
+  });
+  el.textContent='📊 场景 '+project.scenes.length+' · 台词 '+lines+' · 字数 '+words;
+  el.title='选项 '+choices+' · 结局 '+endings+' · Flag '+flags+' · CG视频 '+videos;
 }
 /* ---------------- AI 辅助（接入用户个人 API） ---------------- */
 const aiSaveKey='gvn_ai_settings_v1';
@@ -1375,6 +1431,7 @@ function handleInspectorClick(e){
   const idx=t.dataset.idx!==undefined?+t.dataset.idx:null;
   const owner=t.dataset.owner!==undefined?t.dataset.owner:'';
   if(role==='addDialogue'){sc.dialogues=sc.dialogues||[];sc.dialogues.push({id:uid('d'),speaker:sc.speaker||'',text:''});renderInspector();saveEditor();return;}
+  if(role==='importDialogues'){openImportDialogues();return;}
   if(role==='convertDialogue'){sc.dialogues=[{id:uid('d'),speaker:sc.speaker||'',text:sc.text||''}];sc.text='';renderInspector();saveEditor();return;}
   if(role==='delDialogue'){sc.dialogues.splice(idx,1);renderInspector();saveEditor();return;}
   if(role==='upDialogue'&&idx>0){const arr=sc.dialogues;[arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];renderInspector();saveEditor();return;}
@@ -1455,8 +1512,9 @@ function stopSkip(){if(P.skipTimer){clearInterval(P.skipTimer);P.skipTimer=null;
 function stopAllTimers(){clearPending();stopTyping();stopAuto();stopSkip();}
 function updateSkipButtons(){$('#btnSkipRead').classList.toggle('active',P.skipMode==='read');$('#btnSkipAll').classList.toggle('active',P.skipMode==='all');}
 function updateAutoButton(){$('#btnAuto').classList.toggle('active',P.auto);}
-function openPlayer(proj){
+function openPlayer(proj,startSceneId){
   P.project=migrateProject(deepClone(proj));
+  if(startSceneId&&getSceneP(startSceneId))P.project.startScene=startSceneId;
   P.unlockedEndings=loadSys().unlockedEndings||[];
   P.sceneId=null;P.flags={};P.backlog=[];P.readScenes=new Set();P.history=[];P.ending=null;P.activeCharId=null;P.activeActionId=null;
   stopAllTimers();P.auto=false;P.speed=15;
@@ -2295,6 +2353,10 @@ function initEditorEvents(){
   $('#btnNew').onclick=()=>{if(confirm('新建项目会覆盖当前浏览器中的草稿（建议先导出 JSON 备份）。继续？')){newProject();renderAll();saveEditor();toast('已新建项目');}};
   $('#btnSample').onclick=()=>{if(confirm('载入示例项目会覆盖当前浏览器中的草稿（建议先导出 JSON 备份）。继续？')){project=migrateProject(sampleProject());selectedSceneId=project.startScene;renderAll();saveEditor();toast('已载入示例');}};
   $('#btnPlay').onclick=()=>openPlayer(project);
+  $('#btnPlayScene').onclick=()=>{if(selectedSceneId&&getScene(selectedSceneId)){openPlayer(project,selectedSceneId);}else{toast('请先在左侧选择一个场景');}};
+  $('#btnImportDlgAppend').onclick=()=>importDialogues('append');
+  $('#btnImportDlgReplace').onclick=()=>importDialogues('replace');
+  $('#btnImportDlgCancel').onclick=()=>$('#importDlgModal').classList.add('hidden');
   $('#btnCharModule').onclick=()=>{project.characters=project.characters||[];selectedCharId=selectedCharId||((project.characters&&project.characters[0]&&project.characters[0].id)||null);renderCharModule();$('#charModal').classList.remove('hidden');};
   $('#btnCharAdd').onclick=()=>{
     project.characters=project.characters||[];
@@ -2317,7 +2379,7 @@ function initEditorEvents(){
   $('#aiImgTarget').addEventListener('change',renderAiCharSels);
   $('#aiCharSel').addEventListener('change',renderAiCharSels);
   ['aiImageBaseUrl','aiImageKey','aiImageModel','aiImagePath','aiImageFormat','aiImageSize','aiVideoBaseUrl','aiVideoKey','aiVideoModel','aiVideoPath','aiVideoSize','aiTextBaseUrl','aiTextKey','aiTextModel','aiTextPath'].forEach(id=>{const el=$('#'+id);if(el){el.addEventListener('input',saveAiSettings);el.addEventListener('change',saveAiSettings);}});
-  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('#uiModal').classList.contains('hidden')){closeUIModal();}else if(!$('#aiModal').classList.contains('hidden')){closeAiModal();}else if(!$('#flagsModal').classList.contains('hidden')){applyFlagsModal();$('#flagsModal').classList.add('hidden');}else if(!$('#charModal').classList.contains('hidden')){$('#charModal').classList.add('hidden');saveEditor();}});
+  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('#uiModal').classList.contains('hidden')){closeUIModal();}else if(!$('#aiModal').classList.contains('hidden')){closeAiModal();}else if(!$('#importDlgModal').classList.contains('hidden')){$('#importDlgModal').classList.add('hidden');}else if(!$('#flagsModal').classList.contains('hidden')){applyFlagsModal();$('#flagsModal').classList.add('hidden');}else if(!$('#charModal').classList.contains('hidden')){$('#charModal').classList.add('hidden');saveEditor();}});
   $('#btnFlags').onclick=()=>{renderFlagsModal();$('#flagsModal').classList.remove('hidden');};
   $('#btnAddFlag').onclick=()=>{const row=document.createElement('div');row.className='flag-list-row';row.innerHTML=`<input type="text" data-fidx="-1" data-frole="name" placeholder="新数值名"><input type="number" step="any" data-fidx="-1" data-frole="val" value="0"><button class="mini danger" data-frole="del">✕</button>`;$('#flagsList').appendChild(row);};
   $('#flagsList').addEventListener('click',e=>{const btn=e.target.closest('button[data-frole=del]');if(btn)btn.closest('.flag-list-row').remove();});
