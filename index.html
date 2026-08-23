@@ -248,6 +248,8 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
   <div id="gameScreen" class="hidden">
     <div id="gameBg"></div>
     <div id="videoLayer" class="hidden"><video loop playsinline></video></div>
+    <audio id="bgmAudio" loop></audio>
+    <audio id="voiceAudio"></audio>
     <div id="characterLayer"></div>
     <div id="topbar">
       <button id="btnBackEditor">← 返回编辑器</button>
@@ -494,7 +496,7 @@ const editorSaveKey='gvn_editor_project_v1';
 const editorDraftApp='galgame-studio-draft';
 let draftInfo={savedAt:null,restored:false};
 let draftSaveTimer=null;
-function defaultScene(name,x,y){return{id:uid('s'),name:name||'新场景',x:x||100,y:y||100,bg:'#ffffff',bgImage:'',speaker:'',text:'',video:'',videoMuted:true,ending:null,setFlags:[],next:'',autoBranches:[],choices:[],dialogues:[],characters:[]};}
+function defaultScene(name,x,y){return{id:uid('s'),name:name||'新场景',x:x||100,y:y||100,bg:'#ffffff',bgImage:'',speaker:'',text:'',video:'',videoMuted:true,bgm:'',bgmVolume:0.6,ending:null,setFlags:[],next:'',autoBranches:[],choices:[],dialogues:[],characters:[]};}
 function newProject(){
   const s=defaultScene('开始场景',100,120);s.text='欢迎使用 Galgame 制作工坊！在右侧面板编辑这段文本，然后点击 ▶ 运行测试。';
   project={id:uid('proj'),title:'未命名作品',startScene:s.id,flags:{},ui:defaultUILayout(),scenes:[s],characters:[]};
@@ -536,7 +538,7 @@ function defaultUILayout(){return {textbox:{show:true,x:50,y:94,w:82,opacity:1,b
 function getFlagArray(sc,owner){return owner===''?(sc.setFlags||(sc.setFlags=[])):(sc.choices[+owner].setFlags||(sc.choices[+owner].setFlags=[]));}
 function migrateProject(p){
   p=p||{};p.scenes=p.scenes||[];p.flags=p.flags||{};p.startScene=p.startScene||(p.scenes[0]&&p.scenes[0].id)||'';
-  p.scenes.forEach(s=>{s.setFlags=s.setFlags||[];s.autoBranches=s.autoBranches||[];s.choices=s.choices||[];s.next=s.next||'';s.bg=s.bg||'#ffffff';s.bgImage=s.bgImage||'';s.dialogues=s.dialogues||[];s.dialogues.forEach(d=>{d.speaker=d.speaker||'';d.text=d.text||'';d.charId=d.charId||'';d.actionId=d.actionId||'';});s.video=s.video||'';s.videoMuted=s.videoMuted!==false;s.characters=s.characters||[];s.characters.forEach(c=>{c.name=c.name||'角色';c.image=c.image||'';c.x=c.x??50;c.y=c.y??88;c.scale=c.scale??1;c.opacity=c.opacity??1;c.charId=c.charId||'';c.actionId=c.actionId||'';c.rotate=c.rotate??0;c.dialogueIndex=c.dialogueIndex??0;});});
+  p.scenes.forEach(s=>{s.setFlags=s.setFlags||[];s.autoBranches=s.autoBranches||[];s.choices=s.choices||[];s.next=s.next||'';s.bg=s.bg||'#ffffff';s.bgImage=s.bgImage||'';s.dialogues=s.dialogues||[];s.dialogues.forEach(d=>{d.speaker=d.speaker||'';d.text=d.text||'';d.charId=d.charId||'';d.actionId=d.actionId||'';d.voice=d.voice||'';});s.video=s.video||'';s.videoMuted=s.videoMuted!==false;s.bgm=s.bgm||'';s.bgmVolume=(s.bgmVolume!=null)?s.bgmVolume:0.6;s.characters=s.characters||[];s.characters.forEach(c=>{c.name=c.name||'角色';c.image=c.image||'';c.x=c.x??50;c.y=c.y??88;c.scale=c.scale??1;c.opacity=c.opacity??1;c.charId=c.charId||'';c.actionId=c.actionId||'';c.rotate=c.rotate??0;c.dialogueIndex=c.dialogueIndex??0;});});
   p.characters=p.characters||[];p.characters.forEach(c=>{c.name=c.name||'未命名';c.baseImage=c.baseImage||'';c.originalImage=c.originalImage||c.baseImage;c.actions=c.actions||[];c.live2d=!!c.live2d;c.overlays=c.overlays||[];c.overlays.forEach(o=>{o.name=o.name||'图层';o.image=o.image||'';o.opacity=o.opacity??1;o.visible=o.visible!==false;});c.actions.forEach(a=>{a.name=a.name||'动作';a.image=a.image||'';a.anim=a.anim||'idle';a.speed=a.speed??1;a.duration=a.duration??2;a.loop=a.loop!==false;a.keyframes=a.keyframes||[];a.keyframes.forEach(k=>{k.t=k.t??0;k.x=k.x??0;k.y=k.y??0;k.scale=k.scale??1;k.opacity=k.opacity??1;k.rotate=k.rotate??0;k.ease=k.ease||'linear';});});});
   const du=defaultUILayout();
   p.ui=p.ui||{};
@@ -688,11 +690,21 @@ function inspectorHTML(){
     </div>
   </div>
   <div class="insp-sec">
+    <h4>🎵 背景音乐 (BGM)</h4>
+    <div class="insp-row"><label>BGM URL</label>
+      <div class="dp-btns"><button type="button" class="mini primary" data-role="bgmUpload">📁 上传音频</button><button type="button" class="mini danger" data-role="bgmClear">清除</button></div>
+      <input type="text" data-role="bgmUrl" value="${esc(sc.bgm)}" placeholder="粘贴音频 URL，或上传本地音频" spellcheck="false" style="margin-top:6px">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px"><label style="margin:0">音量</label><input type="range" data-field="bgmVolume" min="0" max="1" step="0.05" value="${sc.bgmVolume!=null?sc.bgmVolume:0.6}" style="flex:1"><span class="hint" id="bgmVolVal">${Math.round((sc.bgmVolume!=null?sc.bgmVolume:0.6)*100)}%</span></div>
+      ${sc.bgm?`<audio src="${esc(sc.bgm)}" controls style="max-width:100%;margin-top:6px"></audio><p class="hint">进入本场景时会自动循环播放 BGM。</p>`:''}
+    </div>
+  </div>
+  <div class="insp-sec">
     <h4>📝 对话编辑</h4>
     ${(sc.dialogues||[]).map((d,i)=>`<div class="choice-card" style="padding:8px">
       <div class="row"><input type="text" data-role="dialogueSpeaker" data-idx="${i}" value="${esc(d.speaker)}" placeholder="说话人（可空）" style="flex:1"><button class="mini" data-role="upDialogue" data-idx="${i}" ${i===0?'disabled':''}>↑</button><button class="mini" data-role="downDialogue" data-idx="${i}" ${i===(sc.dialogues||[]).length-1?'disabled':''}>↓</button><button class="mini danger" data-role="delDialogue" data-idx="${i}">✕</button></div>
       <div class="row" style="margin-top:6px"><label style="font-size:11px;color:#C75C7E">演出角色：</label><select data-role="dialogueChar" data-idx="${i}" style="flex:1">${dialogueCharOptions(sc,d.charId)}</select>${dialogueActionOptions(sc,d,i)}</div>
       <textarea rows="2" data-role="dialogueText" data-idx="${i}" placeholder="台词…">${esc(d.text)}</textarea>
+      <div class="row" style="margin-top:6px"><label style="font-size:11px;color:#C75C7E">配音：</label><input type="text" data-role="dialogueVoice" data-idx="${i}" value="${esc(d.voice)}" placeholder="配音音频 URL（可空）" style="flex:1"></div>
     </div>`).join('')}
     ${(sc.dialogues&&sc.dialogues.length)?'':`<textarea rows="3" data-field="text" placeholder="单条文本……">${esc(sc.text)}</textarea><p class="hint">${sc.text?'当前为单条文本模式，可点击下方按钮转为多组对话。':'暂无对话内容：可直接填写上方单条文本，或添加多组对话。'}</p>`}
     <div class="dp-btns"><button class="mini primary" data-role="addDialogue">＋ 添加对话</button><button class="mini" data-role="importDialogues">📋 批量导入</button>${(!sc.dialogues||!sc.dialogues.length)&&sc.text?`<button class="mini" data-role="convertDialogue">把当前单条文本转为多组对话</button>`:''}</div>
@@ -1440,6 +1452,8 @@ function handleInspectorClick(e){
   if(role==='bgClear'){sc.bgImage='';renderInspector();saveEditor();toast('已清除背景图');return;}
   if(role==='videoUpload'){openVideoFile(data=>{sc.video=data;renderInspector();saveEditor();toast('CG 视频已上传');});return;}
   if(role==='videoClear'){sc.video='';renderInspector();saveEditor();toast('已清除 CG 视频');return;}
+  if(role==='bgmUpload'){openAudioFile(data=>{sc.bgm=data;renderInspector();saveEditor();toast('BGM 已上传');});return;}
+  if(role==='bgmClear'){sc.bgm='';renderInspector();saveEditor();toast('已清除 BGM');return;}
   if(role==='addFlag'){sc.setFlags.push({flag:allFlagNames()[0]||'新数值',op:'+',value:1});renderInspector();return;}
   if(role==='delFlag'){sc.setFlags.splice(idx,1);renderInspector();return;}
   if(role==='addAuto'){sc.autoBranches.push({target:'',cond:''});renderInspector();return;}
@@ -1469,6 +1483,7 @@ function handleInspectorChange(e){
     if(f==='endingEnabled'){sc.ending=t.checked?(sc.ending||{kind:'normal',title:''}):null;renderInspector();renderFlow();return;}
     if(f==='bg'){sc.bg=t.value;renderFlow();saveEditor();return;}
     if(f==='videoMuted'){sc.videoMuted=t.checked;saveEditor();return;}
+    if(f==='bgmVolume'){sc.bgmVolume=parseFloat(t.value)||0;const v=$('#bgmVolVal');if(v)v.textContent=Math.round(sc.bgmVolume*100)+'%';saveEditor();return;}
     if(f==='text'){sc.text=t.value;saveEditor();return;}
     if(f==='name'){sc.name=t.value;renderSceneList();renderFlow();saveEditor();return;}
     if(f==='speaker'){sc.speaker=t.value;saveEditor();return;}
@@ -1481,6 +1496,8 @@ function handleInspectorChange(e){
   const idx=t.dataset.idx!==undefined?+t.dataset.idx:null;const owner=t.dataset.owner!==undefined?t.dataset.owner:'';
   if(role==='bgImageUrl'){sc.bgImage=t.value.trim();saveEditor();return;}
   if(role==='videoUrl'){sc.video=t.value.trim();saveEditor();return;}
+  if(role==='bgmUrl'){sc.bgm=t.value.trim();saveEditor();return;}
+  if(role==='dialogueVoice'){const d=(sc.dialogues||[])[idx];if(d){d.voice=t.value.trim();}saveEditor();return;}
   if(role==='dialogueSpeaker'){if((sc.dialogues||[])[idx])sc.dialogues[idx].speaker=t.value;saveEditor();return;}
   if(role==='dialogueText'){if((sc.dialogues||[])[idx])sc.dialogues[idx].text=t.value;saveEditor();return;}
   if(role==='dialogueChar'){const d=(sc.dialogues||[])[idx];if(d){d.charId=t.value;renderInspector();}saveEditor();return;}
@@ -1522,9 +1539,9 @@ function openPlayer(proj,startSceneId){
   $('#playerApp').classList.remove('hidden');$('#editorApp').style.display='none';
   showTitle();
 }
-function closePlayer(){stopAllTimers();P.demoMode=false;P.demoSelection=null;$('#demoPanel').classList.add('hidden');$('#gameScreen').classList.remove('demo-mode');$('#playerApp').classList.add('hidden');$('#editorApp').style.display='';}
+function closePlayer(){stopAllTimers();playVoice(null);stopBGM();P.demoMode=false;P.demoSelection=null;$('#demoPanel').classList.add('hidden');$('#gameScreen').classList.remove('demo-mode');$('#playerApp').classList.add('hidden');$('#editorApp').style.display='';}
 function showTitle(){
-  $('#gameScreen').classList.add('hidden');$('#gameScreen').classList.remove('demo-mode');$('#titleScreen').classList.remove('hidden');$('#endingScreen').classList.add('hidden');$('#demoPanel').classList.add('hidden');P.demoMode=false;P.demoSelection=null;P.activeCharId=null;P.activeActionId=null;
+  $('#gameScreen').classList.add('hidden');$('#gameScreen').classList.remove('demo-mode');$('#titleScreen').classList.remove('hidden');$('#endingScreen').classList.add('hidden');$('#demoPanel').classList.add('hidden');P.demoMode=false;P.demoSelection=null;P.activeCharId=null;P.activeActionId=null;playVoice(null);stopBGM();
   $('#titleText').textContent=P.project.title||'未命名作品';
   const ends=P.unlockedEndings;
   $('#titleSub').textContent=ends.length?('已解锁结局：'+ends.length+' 个'):'尚未解锁任何结局';
@@ -1571,6 +1588,35 @@ function applyDialogueCast(d){
   P.activeActionId=(ch&&d&&d.actionId)?d.actionId:null;
   renderCharacters();
 }
+function updateBGM(){
+  const sc=currentScene();const a=$('#bgmAudio');if(!a)return;
+  if(sc&&sc.bgm){
+    if(a.dataset.src!==sc.bgm){a.src=sc.bgm;a.dataset.src=sc.bgm;}
+    a.volume=(sc.bgmVolume!=null)?sc.bgmVolume:0.6;
+    a.loop=true;
+    const p=a.play&&a.play();if(p&&p.catch)p.catch(()=>{});
+  }else{
+    try{a.pause&&a.pause();}catch(e){}
+    if(a.dataset.src){try{a.removeAttribute&&a.removeAttribute('src');}catch(e){}a.dataset.src='';}
+  }
+}
+function playVoice(d){
+  const a=$('#voiceAudio');if(!a)return;
+  const src=d&&d.voice?d.voice:'';
+  if(src){
+    if(a.dataset.src!==src){a.src=src;a.dataset.src=src;}
+    a.volume=1;
+    const p=a.play&&a.play();if(p&&p.catch)p.catch(()=>{});
+  }else{
+    try{a.pause&&a.pause();}catch(e){}
+    if(a.dataset.src){try{a.removeAttribute&&a.removeAttribute('src');}catch(e){}a.dataset.src='';}
+  }
+}
+function stopBGM(){
+  const a=$('#bgmAudio');if(!a)return;
+  try{a.pause&&a.pause();}catch(e){}
+  if(a.dataset.src){try{a.removeAttribute&&a.removeAttribute('src');}catch(e){}a.dataset.src='';}
+}
 function enterScene(id,choiceFlags){
   const sc=getSceneP(id);if(!sc){toast('缺少场景：'+id);return;}
   clearPending();stopAuto();stopTyping();
@@ -1590,6 +1636,7 @@ function enterScene(id,choiceFlags){
   if(dlg.length){
     showDialogue(dlg[0]);
   }else{
+    playVoice(null);
     P.currentChoices=P.sceneChoices;
     if(sc.ending){showEnding(sc.ending);return;}
     if(P.currentChoices.length){renderChoices();return;}
@@ -1599,6 +1646,7 @@ function enterScene(id,choiceFlags){
 function showDialogue(d){
   P.currentChoices=[];
   applyDialogueCast(d);
+  playVoice(d);
   const displayText=interpolateText(d.text||'',P.flags);
   P.backlog.push({speaker:d.speaker||'',text:displayText,sceneId:P.sceneId,flags:deepClone(P.flags),readScenes:Array.from(P.readScenes),dialogueIndex:P.dialogueIndex});
   renderBacklogIfOpen();
@@ -1669,6 +1717,7 @@ function renderGame(){
     try{vEl.pause&&vEl.pause();}catch(e){}
     if(vEl.dataset.src){try{vEl.removeAttribute&&vEl.removeAttribute('src');}catch(e){}vEl.dataset.src='';}
   }
+  updateBGM();
   renderCharacters();
   applyUILayout();
 }
@@ -2110,6 +2159,11 @@ function openImageFile(cb){
   inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{const url=fr.result;if(url&&url.length>2500000)toast('图片较大（>2.5MB），自动保存可能失败，建议压缩后使用');cb(url);};fr.readAsDataURL(f);};
   inp.click();
 }
+function openAudioFile(cb){
+  const inp=document.createElement('input');inp.type='file';inp.accept='audio/*';
+  inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{const url=fr.result;if(url&&url.length>2500000)toast('音频较大（>2.5MB），自动保存可能失败，建议使用外链 URL');cb(url);};fr.readAsDataURL(f);};
+  inp.click();
+}
 function openVideoFile(cb){
   const inp=document.createElement('input');inp.type='file';inp.accept='video/*';
   inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{const url=fr.result;if(url&&url.length>4000000)toast('视频较大（>4MB），自动保存可能失败，建议使用外链 URL');cb(url);};fr.readAsDataURL(f);};
@@ -2121,6 +2175,7 @@ function toggleDemoMode(){
   if(P.demoMode){
     if(P.typing)finishTyping();
     stopAllTimers();
+    playVoice(null);
     P.demoSelection=null;
     P.activeCharId=null;P.activeActionId=null;
     $('#demoPanel').classList.remove('hidden');
@@ -2201,6 +2256,7 @@ function back(){
   P.activeCharId=null;P.activeActionId=null;
   renderGame();
   applyDialogueCast(currentDialogue());
+  playVoice(null);
   const last=P.backlog[P.backlog.length-1];
   showText(last?last.speaker:'',last?last.text:'',true);
   if(P.currentChoices.length)renderChoices();
@@ -2246,6 +2302,7 @@ function jumpToBacklog(idx){
   P.activeCharId=null;P.activeActionId=null;
   renderGame();
   applyDialogueCast(currentDialogue());
+  playVoice(null);
   showText(en.speaker||'',en.text||'',true);
   if(P.currentChoices.length)renderChoices();
 }
@@ -2258,7 +2315,7 @@ function recordEnding(ending){
 function showEnding(ending){
   if(P.ending)return;
   P.ending=ending;
-  stopAllTimers();hideChoices();
+  stopAllTimers();hideChoices();playVoice(null);
   recordEnding(ending);
   const kindMap={good:'好结局',normal:'普通结局',bad:'坏结局',true:'真结局',custom:'自定义结局'};
   $('#endingKind').textContent=kindMap[ending.kind]||'结局';
@@ -2292,6 +2349,7 @@ function loadFromSlot(i){
   P.activeCharId=null;P.activeActionId=null;
   renderGame();
   applyDialogueCast(currentDialogue());
+  playVoice(null);
   const last=P.backlog[P.backlog.length-1];
   showText(last?last.speaker:'',last?last.text:'',true);
   if(P.currentChoices.length)renderChoices();
