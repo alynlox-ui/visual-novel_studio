@@ -212,6 +212,7 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
     <button id="btnFlags">⚙ 数值管理</button>
     <button id="btnCharModule">🎭 人物模块</button>
     <button id="btnAutoLayout">自动布局</button>
+    <button id="btnOutline">📖 大纲 / 分支表</button>
     <button id="btnUiSettings">🎨 UI 设置</button>
     <button id="btnAi">🤖 AI 辅助</button>
     <span style="flex:1"></span>
@@ -341,6 +342,45 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
     <p class="hint">每行一句；格式：<b>说话人：台词</b> 或 <b>说话人: 台词</b>。没有冒号则整行作为旁白。</p>
     <textarea id="importDlgText" rows="12" placeholder="小夜：今天也一起回家吧。&#10;你：嗯，好呀。&#10;旁白：黄昏把两人的影子拉得很长。"></textarea>
     <div class="modal-actions"><button id="btnImportDlgCancel">取消</button><button id="btnImportDlgReplace" class="danger">替换当前对话</button><button id="btnImportDlgAppend" class="primary">追加到当前对话</button></div>
+  </div>
+</div>
+<!-- 大纲与分支表模态 -->
+<div id="outlineModal" class="modal hidden">
+  <div class="modal-box" style="width:min(860px,96vw)">
+    <h3>📖 大纲 / 分支表</h3>
+    <div class="dp-btns" style="margin-bottom:10px">
+      <button id="tabOutlineBtn" class="mini primary">📖 故事大纲</button>
+      <button id="tabBranchBtn" class="mini">🔀 分支表</button>
+    </div>
+    <div id="outlineTab">
+      <div class="insp-sec">
+        <h4>一句话简介（Logline）</h4>
+        <input type="text" id="outlineLogline" placeholder="例如：放学后的教室，少年必须在两位少女之间做出选择……">
+      </div>
+      <div class="insp-sec">
+        <h4>故事摘要</h4>
+        <textarea id="outlineSummary" rows="6" placeholder="用几段话概括整个故事：开端、发展、转折、结局……"></textarea>
+      </div>
+      <div class="insp-sec">
+        <h4>🗺 路线规划</h4>
+        <div id="outlineRoutes"></div>
+        <button id="btnAddRoute" class="mini primary">＋ 添加路线</button>
+        <p class="hint">路线规划用于在动工前梳理共通线、个人线、真结局等大方向。</p>
+      </div>
+    </div>
+    <div id="branchTab" class="hidden">
+      <div class="insp-sec">
+        <h4>📋 计划分支表</h4>
+        <div id="branchPlanRows"></div>
+        <button id="btnAddBranchPlan" class="mini primary">＋ 添加分支计划</button>
+        <p class="hint">计划分支表是动工前的路线蓝图；实际搭建场景后，下方会自动汇总当前所有场景分支。</p>
+      </div>
+      <div class="insp-sec">
+        <h4>⚡ 当前场景分支总览</h4>
+        <div id="branchOverview"></div>
+      </div>
+    </div>
+    <div class="modal-actions"><button id="btnOutlineClose" class="primary">完成</button></div>
   </div>
 </div>
 <!-- UI 设置模态 -->
@@ -499,7 +539,7 @@ let draftSaveTimer=null;
 function defaultScene(name,x,y){return{id:uid('s'),name:name||'新场景',x:x||100,y:y||100,bg:'#ffffff',bgImage:'',speaker:'',text:'',video:'',videoMuted:true,bgm:'',bgmVolume:0.6,ending:null,setFlags:[],next:'',autoBranches:[],choices:[],dialogues:[],characters:[]};}
 function newProject(){
   const s=defaultScene('开始场景',100,120);s.text='欢迎使用 Galgame 制作工坊！在右侧面板编辑这段文本，然后点击 ▶ 运行测试。';
-  project={id:uid('proj'),title:'未命名作品',startScene:s.id,flags:{},ui:defaultUILayout(),scenes:[s],characters:[]};
+  project={id:uid('proj'),title:'未命名作品',startScene:s.id,flags:{},ui:defaultUILayout(),outline:{logline:'',summary:'',routes:[]},branchPlan:[],scenes:[s],characters:[]};
   selectedSceneId=s.id;
 }
 function sampleProject(){
@@ -538,6 +578,8 @@ function defaultUILayout(){return {textbox:{show:true,x:50,y:94,w:82,opacity:1,b
 function getFlagArray(sc,owner){return owner===''?(sc.setFlags||(sc.setFlags=[])):(sc.choices[+owner].setFlags||(sc.choices[+owner].setFlags=[]));}
 function migrateProject(p){
   p=p||{};p.scenes=p.scenes||[];p.flags=p.flags||{};p.startScene=p.startScene||(p.scenes[0]&&p.scenes[0].id)||'';
+  p.outline=p.outline||{};p.outline.logline=p.outline.logline||'';p.outline.summary=p.outline.summary||'';p.outline.routes=p.outline.routes||[];p.outline.routes.forEach(r=>{r.name=r.name||'';r.summary=r.summary||'';});
+  p.branchPlan=p.branchPlan||[];p.branchPlan.forEach(b=>{b.route=b.route||'';b.chapter=b.chapter||'';b.condition=b.condition||'';b.target=b.target||'';b.ending=b.ending||'';b.note=b.note||'';});
   p.scenes.forEach(s=>{s.setFlags=s.setFlags||[];s.autoBranches=s.autoBranches||[];s.choices=s.choices||[];s.next=s.next||'';s.bg=s.bg||'#ffffff';s.bgImage=s.bgImage||'';s.dialogues=s.dialogues||[];s.dialogues.forEach(d=>{d.speaker=d.speaker||'';d.text=d.text||'';d.charId=d.charId||'';d.actionId=d.actionId||'';d.voice=d.voice||'';});s.video=s.video||'';s.videoMuted=s.videoMuted!==false;s.bgm=s.bgm||'';s.bgmVolume=(s.bgmVolume!=null)?s.bgmVolume:0.6;s.characters=s.characters||[];s.characters.forEach(c=>{c.name=c.name||'角色';c.image=c.image||'';c.x=c.x??50;c.y=c.y??88;c.scale=c.scale??1;c.opacity=c.opacity??1;c.charId=c.charId||'';c.actionId=c.actionId||'';c.rotate=c.rotate??0;c.dialogueIndex=c.dialogueIndex??0;});});
   p.characters=p.characters||[];p.characters.forEach(c=>{c.name=c.name||'未命名';c.baseImage=c.baseImage||'';c.originalImage=c.originalImage||c.baseImage;c.actions=c.actions||[];c.live2d=!!c.live2d;c.overlays=c.overlays||[];c.overlays.forEach(o=>{o.name=o.name||'图层';o.image=o.image||'';o.opacity=o.opacity??1;o.visible=o.visible!==false;});c.actions.forEach(a=>{a.name=a.name||'动作';a.image=a.image||'';a.anim=a.anim||'idle';a.speed=a.speed??1;a.duration=a.duration??2;a.loop=a.loop!==false;a.keyframes=a.keyframes||[];a.keyframes.forEach(k=>{k.t=k.t??0;k.x=k.x??0;k.y=k.y??0;k.scale=k.scale??1;k.opacity=k.opacity??1;k.rotate=k.rotate??0;k.ease=k.ease||'linear';});});});
   const du=defaultUILayout();
@@ -1050,6 +1092,53 @@ function renderSceneStats(){
   el.textContent='📊 场景 '+project.scenes.length+' · 台词 '+lines+' · 字数 '+words;
   el.title='选项 '+choices+' · 结局 '+endings+' · Flag '+flags+' · CG视频 '+videos;
 }
+function renderOutlineRoutes(){
+  const box=$('#outlineRoutes');if(!box)return;
+  const routes=(project.outline&&project.outline.routes)||[];
+  box.innerHTML=routes.map((r,i)=>`<div class="choice-card" style="padding:8px"><div class="row"><input type="text" data-route-idx="${i}" data-route-field="name" value="${esc(r.name)}" placeholder="路线名，如：小夜线 / 共通线 / 真结局" style="flex:1"><button class="mini danger" data-del-route="${i}">✕</button></div><textarea rows="2" data-route-idx="${i}" data-route-field="summary" placeholder="路线简介……">${esc(r.summary)}</textarea></div>`).join('')||'<p class="hint">还没有路线规划，点击下方按钮添加。</p>';
+  box.querySelectorAll('[data-route-idx]').forEach(el=>{
+    el.oninput=()=>{const i=+el.dataset.routeIdx;const r=(project.outline.routes||[])[i];if(r)r[el.dataset.routeField]=el.value;saveEditor();};
+  });
+  box.querySelectorAll('[data-del-route]').forEach(btn=>{btn.onclick=()=>{project.outline.routes.splice(+btn.dataset.delRoute,1);renderOutlineRoutes();saveEditor();};});
+}
+function renderBranchPlanRows(){
+  const box=$('#branchPlanRows');if(!box)return;
+  const rows=project.branchPlan||[];
+  box.innerHTML=rows.map((b,i)=>`<div class="choice-card" style="padding:8px"><div class="row"><input type="text" data-bp-idx="${i}" data-bp-field="route" value="${esc(b.route)}" placeholder="路线" style="flex:1"><input type="text" data-bp-idx="${i}" data-bp-field="chapter" value="${esc(b.chapter)}" placeholder="章节/幕" style="flex:1"><button class="mini danger" data-del-bp="${i}">✕</button></div><div class="row"><input type="text" data-bp-idx="${i}" data-bp-field="condition" value="${esc(b.condition)}" placeholder="触发条件，如 小夜好感 >= 2" style="flex:1.2"><input type="text" data-bp-idx="${i}" data-bp-field="target" value="${esc(b.target)}" placeholder="目标场景 / 结局" style="flex:1"></div><input type="text" data-bp-idx="${i}" data-bp-field="note" value="${esc(b.note)}" placeholder="备注（可选）" style="margin-top:6px"></div>`).join('')||'<p class="hint">还没有分支计划，点击下方按钮添加。</p>';
+  box.querySelectorAll('[data-bp-idx]').forEach(el=>{
+    el.oninput=()=>{const i=+el.dataset.bpIdx;const b=(project.branchPlan||[])[i];if(b)b[el.dataset.bpField]=el.value;saveEditor();};
+  });
+  box.querySelectorAll('[data-del-bp]').forEach(btn=>{btn.onclick=()=>{project.branchPlan.splice(+btn.dataset.delBp,1);renderBranchPlanRows();saveEditor();};});
+}
+function renderBranchOverview(){
+  const box=$('#branchOverview');if(!box)return;
+  if(!project.scenes||!project.scenes.length){box.innerHTML='<p class="hint">暂无场景。</p>';return;}
+  const rows=[];
+  project.scenes.forEach(sc=>{
+    if(sc.next){rows.push({scene:sc.name||sc.id,type:'默认下一场景',cond:'',target:sceneNameById(sc.next)});}
+    (sc.autoBranches||[]).forEach(ab=>{rows.push({scene:sc.name||sc.id,type:'自动分支',cond:ab.cond||'无条件',target:sceneNameById(ab.target)||ab.target||'—'});});
+    (sc.choices||[]).forEach(c=>{rows.push({scene:sc.name||sc.id,type:'选项',cond:c.cond||'无条件',target:sceneNameById(c.target)||c.target||'—'});});
+    if(sc.ending){rows.push({scene:sc.name||sc.id,type:'结局',cond:'',target:(sc.ending.title||sc.ending.kind||'END')});}
+  });
+  if(!rows.length){box.innerHTML='<p class="hint">当前还没有任何分支。</p>';return;}
+  box.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#F4F5F7;color:#61666D"><th style="padding:6px;text-align:left">场景</th><th style="padding:6px;text-align:left">类型</th><th style="padding:6px;text-align:left">条件</th><th style="padding:6px;text-align:left">目标</th></tr></thead><tbody>${rows.map(r=>`<tr style="border-top:1px solid #E3E5E7"><td style="padding:6px">${esc(r.scene)}</td><td style="padding:6px">${esc(r.type)}</td><td style="padding:6px">${esc(r.cond)}</td><td style="padding:6px">${esc(r.target)}</td></tr>`).join('')}</tbody></table>`;
+}
+function sceneNameById(id){const sc=project.scenes.find(s=>s.id===id);return sc?(sc.name||sc.id):'';}
+function openOutlineModal(){
+  if(!project.outline)project.outline={logline:'',summary:'',routes:[]};
+  if(!project.branchPlan)project.branchPlan=[];
+  $('#outlineLogline').value=project.outline.logline||'';
+  $('#outlineSummary').value=project.outline.summary||'';
+  renderOutlineRoutes();
+  renderBranchPlanRows();
+  renderBranchOverview();
+  $('#outlineModal').classList.remove('hidden');
+  $('#tabOutlineBtn').classList.add('primary');$('#tabBranchBtn').classList.remove('primary');
+  $('#outlineTab').classList.remove('hidden');$('#branchTab').classList.add('hidden');
+}
+function closeOutlineModal(){saveEditor();$('#outlineModal').classList.add('hidden');}
+function addOutlineRoute(){project.outline.routes=project.outline.routes||[];project.outline.routes.push({name:'新路线',summary:''});renderOutlineRoutes();saveEditor();}
+function addBranchPlanRow(){project.branchPlan=project.branchPlan||[];project.branchPlan.push({route:'',chapter:'',condition:'',target:'',ending:'',note:''});renderBranchPlanRows();saveEditor();}
 /* ---------------- AI 辅助（接入用户个人 API） ---------------- */
 const aiSaveKey='gvn_ai_settings_v1';
 let aiBusy=false;
@@ -2424,6 +2513,14 @@ function initEditorEvents(){
     renderCharModule();saveEditor();toast('已新建人物');
   };
   $('#btnCharModuleClose').onclick=()=>{$('#charModal').classList.add('hidden');saveEditor();};
+  $('#btnOutline').onclick=openOutlineModal;
+  $('#btnOutlineClose').onclick=closeOutlineModal;
+  $('#btnAddRoute').onclick=addOutlineRoute;
+  $('#btnAddBranchPlan').onclick=addBranchPlanRow;
+  $('#tabOutlineBtn').onclick=()=>{openOutlineModal();};
+  $('#tabBranchBtn').onclick=()=>{if(!$('#outlineModal').classList.contains('hidden')){$('#tabOutlineBtn').classList.remove('primary');$('#tabBranchBtn').classList.add('primary');$('#outlineTab').classList.add('hidden');$('#branchTab').classList.remove('hidden');}};
+  $('#outlineLogline').addEventListener('input',e=>{if(project.outline){project.outline.logline=e.target.value;}saveEditor();});
+  $('#outlineSummary').addEventListener('input',e=>{if(project.outline){project.outline.summary=e.target.value;}saveEditor();});
   $('#btnUiSettings').onclick=openUIModal;
   $('#btnUiClose').onclick=closeUIModal;
   $('#btnUiResetAll').onclick=resetAllUI;
@@ -2437,7 +2534,7 @@ function initEditorEvents(){
   $('#aiImgTarget').addEventListener('change',renderAiCharSels);
   $('#aiCharSel').addEventListener('change',renderAiCharSels);
   ['aiImageBaseUrl','aiImageKey','aiImageModel','aiImagePath','aiImageFormat','aiImageSize','aiVideoBaseUrl','aiVideoKey','aiVideoModel','aiVideoPath','aiVideoSize','aiTextBaseUrl','aiTextKey','aiTextModel','aiTextPath'].forEach(id=>{const el=$('#'+id);if(el){el.addEventListener('input',saveAiSettings);el.addEventListener('change',saveAiSettings);}});
-  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('#uiModal').classList.contains('hidden')){closeUIModal();}else if(!$('#aiModal').classList.contains('hidden')){closeAiModal();}else if(!$('#importDlgModal').classList.contains('hidden')){$('#importDlgModal').classList.add('hidden');}else if(!$('#flagsModal').classList.contains('hidden')){applyFlagsModal();$('#flagsModal').classList.add('hidden');}else if(!$('#charModal').classList.contains('hidden')){$('#charModal').classList.add('hidden');saveEditor();}});
+  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('#uiModal').classList.contains('hidden')){closeUIModal();}else if(!$('#aiModal').classList.contains('hidden')){closeAiModal();}else if(!$('#importDlgModal').classList.contains('hidden')){$('#importDlgModal').classList.add('hidden');}else if(!$('#outlineModal').classList.contains('hidden')){closeOutlineModal();}else if(!$('#flagsModal').classList.contains('hidden')){applyFlagsModal();$('#flagsModal').classList.add('hidden');}else if(!$('#charModal').classList.contains('hidden')){$('#charModal').classList.add('hidden');saveEditor();}});
   $('#btnFlags').onclick=()=>{renderFlagsModal();$('#flagsModal').classList.remove('hidden');};
   $('#btnAddFlag').onclick=()=>{const row=document.createElement('div');row.className='flag-list-row';row.innerHTML=`<input type="text" data-fidx="-1" data-frole="name" placeholder="新数值名"><input type="number" step="any" data-fidx="-1" data-frole="val" value="0"><button class="mini danger" data-frole="del">✕</button>`;$('#flagsList').appendChild(row);};
   $('#flagsList').addEventListener('click',e=>{const btn=e.target.closest('button[data-frole=del]');if(btn)btn.closest('.flag-list-row').remove();});
