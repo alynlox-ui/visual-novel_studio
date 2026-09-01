@@ -72,6 +72,10 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
 .node .nid{fill:#9499A0;font-size:10px}
 .node .nname{fill:#18191C;font-size:13px;font-weight:600}
 .node .nbadge{fill:#FFB800;font-size:11px}
+.node.link-source rect{stroke:#FB7299;stroke-width:3;stroke-dasharray:6 4}
+#flowContextMenu{position:absolute;background:#FFFFFF;border:1px solid #E3E5E7;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:20;padding:6px;min-width:190px}
+#flowContextMenu button{display:block;width:100%;text-align:left;background:#FFFFFF;border:none;padding:8px 10px;font-size:13px;border-radius:7px;white-space:nowrap}
+#flowContextMenu button:hover{background:#F1F2F3}
 .edge-label{fill:#61666D;font-size:11px;paint-order:stroke;stroke:#F4F5F7;stroke-width:4px;stroke-linejoin:round}
 #playerApp{position:fixed;inset:0;z-index:100;background:#F4F5F7}
 #gameScreen{position:absolute;inset:0}
@@ -231,6 +235,7 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
       <div id="sceneStats" class="panel-stats" title=""></div>
     </aside>
     <div id="canvasWrap">
+      <div id="flowContextMenu" class="hidden"></div>
       <svg id="flowSvg">
         <defs>
           <marker id="arrowNext" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 z" fill="#9499A0"/></marker>
@@ -808,7 +813,7 @@ function renderFlow(){
     (sc.choices||[]).forEach(c=>{if(c.target&&map[c.target])edge(sc,map[c.target],'choice',c.text);});
   });
   scenes.forEach(sc=>{
-    const node=document.createElementNS(SVGNS,'g');node.setAttribute('class','node');node.setAttribute('transform',`translate(${sc.x},${sc.y})`);node.dataset.id=sc.id;
+    const node=document.createElementNS(SVGNS,'g');node.setAttribute('class',(pendingFlowLink&&pendingFlowLink.from===sc.id)?'node link-source':'node');node.setAttribute('transform',`translate(${sc.x},${sc.y})`);node.dataset.id=sc.id;
     const rect=document.createElementNS(SVGNS,'rect');rect.setAttribute('width',NODE_W);rect.setAttribute('height',NODE_H);rect.setAttribute('rx',11);
     rect.setAttribute('fill','#ffffff');
     rect.setAttribute('stroke',sc.id===selectedSceneId?'#FB7299':(sc.id===project.startScene?'#FB7299':(sc.ending?'#FFB800':'#E3E5E7')));
@@ -831,14 +836,59 @@ function rectEdgePoint(node,toward){
 }
 /* 流程图交互 */
 let flowTx=20,flowTy=20,flowK=1;
+let pendingFlowLink=null;
 function applyFlowTransform(){$('#flowWorld').setAttribute('transform',`translate(${flowTx},${flowTy}) scale(${flowK})`);}
 function clientToWorld(e){const r=$('#flowSvg').getBoundingClientRect();return{x:(e.clientX-r.left-flowTx)/flowK,y:(e.clientY-r.top-flowTy)/flowK};}
 function initFlowEvents(){
   const svg=$('#flowSvg');let dragNode=null,offX=0,offY=0,panning=false,panSX=0,panSY=0,panTX=0,panTY=0,pointerMoved=false;
+  const ctxMenu=$('#flowContextMenu');
+  const hideCtx=()=>{if(ctxMenu)ctxMenu.classList.add('hidden');};
+  const showCtx=(x,y,scId)=>{
+    if(!ctxMenu)return;
+    ctxMenu.innerHTML='<button data-link-next="'+esc(scId)+'">➡ 设为默认下一场景</button><button data-link-auto="'+esc(scId)+'">🔀 添加自动分支（条件）</button><button data-link-choice="'+esc(scId)+'">💬 添加选项分支</button><button data-link-new="'+esc(scId)+'">＋ 新建场景并设为下一场景</button>';
+    ctxMenu.classList.remove('hidden');
+    ctxMenu.style.left=x+'px';ctxMenu.style.top=y+'px';
+    ctxMenu.querySelectorAll('button').forEach(btn=>{
+      btn.onclick=()=>{
+        const from=btn.dataset.linkNext||btn.dataset.linkAuto||btn.dataset.linkChoice||btn.dataset.linkNew;
+        const type=btn.dataset.linkNext?'next':(btn.dataset.linkAuto?'auto':(btn.dataset.linkChoice?'choice':'new'));
+        hideCtx();
+        if(type==='new'){createSceneAndLink(from);}
+        else{pendingFlowLink={from:from,type:type};renderFlow();toast('请点击目标场景方块完成连线（Esc 或点击空白取消）');}
+      };
+    });
+  };
+  const completeFlowLink=targetId=>{
+    if(!pendingFlowLink)return;
+    const from=getScene(pendingFlowLink.from);
+    if(!from){pendingFlowLink=null;return;}
+    if(targetId===pendingFlowLink.from){toast('不能连接到自己');pendingFlowLink=null;hideCtx();renderFlow();return;}
+    if(pendingFlowLink.type==='next'){from.next=targetId;toast('已设置默认下一场景');}
+    else if(pendingFlowLink.type==='auto'){from.autoBranches=from.autoBranches||[];from.autoBranches.push({target:targetId,cond:''});toast('已添加自动分支，请在右侧设置条件');}
+    else if(pendingFlowLink.type==='choice'){from.choices=from.choices||[];from.choices.push({id:uid('c'),text:'新选项',target:targetId,cond:'',setFlags:[]});toast('已添加选项分支，请在右侧编辑文字');}
+    selectedSceneId=from.id;
+    pendingFlowLink=null;hideCtx();
+    renderSceneList();renderInspector();renderFlow();saveEditor();
+  };
+  const cancelFlowLink=()=>{if(!pendingFlowLink)return;pendingFlowLink=null;hideCtx();renderFlow();toast('已取消连线');};
+  function createSceneAndLink(fromId){
+    const from=getScene(fromId);if(!from)return;
+    const s=defaultScene('新场景',from.x+260,from.y+40);project.scenes.push(s);
+    from.next=s.id;selectedSceneId=s.id;
+    renderAll();saveEditor();toast('已创建新场景并连接');
+  }
   svg.addEventListener('pointerdown',e=>{
+    if(e.button!==0)return;
     const nodeEl=e.target.closest&&e.target.closest('.node');
-    if(nodeEl){const sc=getScene(nodeEl.dataset.id);if(sc){selectedSceneId=sc.id;renderSceneList();renderInspector();const w=clientToWorld(e);offX=w.x-sc.x;offY=w.y-sc.y;dragNode=sc;pointerMoved=false;svg.setPointerCapture(e.pointerId);}}
-    else{panning=true;panSX=e.clientX;panSY=e.clientY;panTX=flowTx;panTY=flowTy;pointerMoved=false;svg.setPointerCapture(e.pointerId);}
+    if(nodeEl){
+      const sc=getScene(nodeEl.dataset.id);if(sc){
+        if(pendingFlowLink){completeFlowLink(sc.id);e.preventDefault();return;}
+        selectedSceneId=sc.id;renderSceneList();renderInspector();const w=clientToWorld(e);offX=w.x-sc.x;offY=w.y-sc.y;dragNode=sc;pointerMoved=false;svg.setPointerCapture(e.pointerId);
+      }
+    }else{
+      if(pendingFlowLink){cancelFlowLink();}
+      panning=true;panSX=e.clientX;panSY=e.clientY;panTX=flowTx;panTY=flowTy;pointerMoved=false;svg.setPointerCapture(e.pointerId);
+    }
   });
   svg.addEventListener('pointermove',e=>{
     if(dragNode){const w=clientToWorld(e);dragNode.x=Math.round(w.x-offX);dragNode.y=Math.round(w.y-offY);pointerMoved=true;renderFlow();}
@@ -846,6 +896,17 @@ function initFlowEvents(){
   });
   const up=e=>{if(dragNode){dragNode=null;if(pointerMoved)saveEditor();}panning=false;};
   svg.addEventListener('pointerup',up);svg.addEventListener('pointercancel',up);
+  svg.addEventListener('contextmenu',e=>{
+    const nodeEl=e.target.closest&&e.target.closest('.node');
+    if(nodeEl){
+      e.preventDefault();
+      const sc=getScene(nodeEl.dataset.id);if(sc){
+        const r=$('#canvasWrap').getBoundingClientRect();
+        showCtx(e.clientX-r.left,e.clientY-r.top,sc.id);
+      }
+    }else{hideCtx();}
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pendingFlowLink){e.preventDefault();cancelFlowLink();}});
   svg.addEventListener('wheel',e=>{e.preventDefault();const f=Math.exp(-e.deltaY*0.0012);flowK=Math.min(3,Math.max(0.15,flowK*f));applyFlowTransform();},{passive:false});
 }
 function autoLayout(){
