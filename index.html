@@ -73,6 +73,9 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
 .node .nname{fill:#18191C;font-size:13px;font-weight:600}
 .node .nbadge{fill:#FFB800;font-size:11px}
 .node.link-source rect{stroke:#FB7299;stroke-width:3;stroke-dasharray:6 4}
+.flow-port{cursor:crosshair}
+.flow-port:hover{filter:brightness(1.15)}
+.link-drag{stroke:#FB7299;stroke-width:2;stroke-dasharray:6 4;pointer-events:none;fill:none}
 #flowContextMenu{position:absolute;background:#FFFFFF;border:1px solid #E3E5E7;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:20;padding:6px;min-width:190px}
 #flowContextMenu button{display:block;width:100%;text-align:left;background:#FFFFFF;border:none;padding:8px 10px;font-size:13px;border-radius:7px;white-space:nowrap}
 #flowContextMenu button:hover{background:#F1F2F3}
@@ -203,6 +206,43 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
 .gizmo-scale{right:-10px;bottom:-10px;cursor:nwse-resize}
 .gizmo-rotate{right:-10px;top:-10px;cursor:grab}
 .gizmo-rotate:active{cursor:grabbing}
+/* ===== UX 优化：层级、响应式与可读性 ===== */
+:root{--accent:#FB7299;--accent-soft:#FFF0F4;--line:#E3E5E7;--muted:#61666D;--surface:#FFFFFF;--canvas:#F4F5F7}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(251,114,153,.28);outline-offset:2px}
+header{gap:6px;padding:8px 14px;height:auto;min-height:58px;align-content:center}
+header button{white-space:nowrap}
+header .logo{font-size:15px}
+#projectTitle{min-width:150px;flex:0 1 220px}
+.panel-head{padding-top:14px}
+#sceneSearch{width:100%;padding:8px 10px;border-radius:8px}
+.scene-search-wrap{padding:4px 12px 8px}
+#sceneList{padding-top:2px}
+#inspector{scroll-behavior:smooth}
+.insp-sec{box-shadow:0 1px 2px rgba(24,25,28,.03)}
+.insp-sec h4{line-height:1.4}
+.hint{color:#737A83}
+@media (max-width:1100px){
+  #scenePanel{width:220px}
+  #inspector{width:320px}
+  header .logo{display:none}
+}
+@media (max-width:760px){
+  body{overflow:auto}
+  #editorApp{height:auto;min-height:100vh}
+  header{position:sticky;top:0;z-index:80;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+  header span[style*="flex:1"]{display:none}
+  header button{padding:7px 9px;font-size:12px}
+  #projectTitle{order:-1;flex:1 1 180px;width:auto}
+  .editor-main{display:block;min-height:calc(100vh - 80px)}
+  #scenePanel{width:100%;height:auto;max-height:34vh;border-right:0;border-bottom:1px solid var(--line)}
+  #sceneList{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;padding:4px 12px 10px}
+  .scene-item{min-width:190px;margin:0}
+  #canvasWrap{height:38vh;min-height:260px}
+  #inspector{width:100%;border-left:0;padding:10px;overflow:visible}
+  .modal-box{padding:16px}
+  .char-module{display:block}
+  .char-lib-list{width:100%;border-right:0;border-bottom:1px solid var(--line);padding:0 0 10px;margin-bottom:10px;max-height:150px}
+}
 </style>
 </head>
 <body>
@@ -226,11 +266,13 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
     <button id="btnImport">导入 JSON</button>
     <button id="btnPlay" class="primary">▶ 运行测试</button>
     <button id="btnPlayScene" title="从当前选中的场景开始测试">▶ 测试当前场景</button>
+    <button id="btnHelp" title="查看快速上手指南">？ 帮助</button>
   </header>
   <div class="editor-main">
     <aside id="scenePanel">
       <div class="panel-head">📑 场景列表 <button id="btnAddScene" class="mini primary">＋ 新建</button></div>
       <div class="panel-sub">起点：<select id="startSceneSel"></select></div>
+      <div class="scene-search-wrap"><input id="sceneSearch" type="search" placeholder="搜索场景名称…" aria-label="搜索场景名称"></div>
       <div id="sceneList"></div>
       <div id="sceneStats" class="panel-stats" title=""></div>
     </aside>
@@ -656,7 +698,9 @@ function renderStartSel(){
 }
 function renderSceneList(){
   const box=$('#sceneList');box.innerHTML='';
-  project.scenes.forEach(s=>{
+  const query=String($('#sceneSearch')?.value||'').trim().toLowerCase();
+  const scenes=project.scenes.filter(s=>!query||String(s.name||s.id).toLowerCase().includes(query));
+  scenes.forEach(s=>{
     const el=document.createElement('div');el.className='scene-item'+(s.id===selectedSceneId?' selected':'');
     el.innerHTML=`<span class="sstart" title="起始场景">${s.id===project.startScene?'▶':''}</span>
       <span class="sname">${esc(s.name||s.id)}</span>
@@ -821,7 +865,12 @@ function renderFlow(){
     node.appendChild(rect);
     const name=document.createElementNS(SVGNS,'text');name.setAttribute('x',NODE_W/2);name.setAttribute('y',30);name.setAttribute('text-anchor','middle');name.setAttribute('class','nname');name.textContent=trunc(sc.name||sc.id,14);node.appendChild(name);
     const id=document.createElementNS(SVGNS,'text');id.setAttribute('x',NODE_W/2);id.setAttribute('y',50);id.setAttribute('text-anchor','middle');id.setAttribute('class','nid');id.textContent=sc.id;node.appendChild(id);
-    if(sc.ending){const star=document.createElementNS(SVGNS,'text');star.setAttribute('x',NODE_W-14);star.setAttribute('y',20);star.setAttribute('text-anchor','middle');star.setAttribute('class','nbadge');star.textContent='★';node.appendChild(star);}
+    if(sc.ending){const star=document.createElementNS(SVGNS,'text');star.setAttribute('x',NODE_W-14);star.setAttribute('y',14);star.setAttribute('text-anchor','middle');star.setAttribute('class','nbadge');star.textContent='★';node.appendChild(star);}
+    [['next',24,'#9499A0','拖到目标场景：设为默认下一场景'],['auto',40,'#FFB800','拖到目标场景：添加自动分支'],['choice',56,'#00A1D6','拖到目标场景：添加选项分支']].forEach(([pt,py,color,tip])=>{
+      const c=document.createElementNS(SVGNS,'circle');c.setAttribute('cx',NODE_W);c.setAttribute('cy',py);c.setAttribute('r',6);c.setAttribute('fill',color);c.setAttribute('stroke','#fff');c.setAttribute('stroke-width','2');c.setAttribute('class','flow-port');c.dataset.portType=pt;c.dataset.from=sc.id;
+      const t=document.createElementNS(SVGNS,'title');t.textContent=tip;c.appendChild(t);
+      node.appendChild(c);
+    });
     g.appendChild(node);
   });
 }
@@ -842,6 +891,7 @@ function clientToWorld(e){const r=$('#flowSvg').getBoundingClientRect();return{x
 function initFlowEvents(){
   const svg=$('#flowSvg');let dragNode=null,offX=0,offY=0,panning=false,panSX=0,panSY=0,panTX=0,panTY=0,pointerMoved=false;
   const ctxMenu=$('#flowContextMenu');
+  let dragLink=null,tempLine=null;
   const hideCtx=()=>{if(ctxMenu)ctxMenu.classList.add('hidden');};
   const showCtx=(x,y,scId)=>{
     if(!ctxMenu)return;
@@ -858,17 +908,19 @@ function initFlowEvents(){
       };
     });
   };
+  const finishLink=(fromId,type,targetId)=>{
+    const from=getScene(fromId);if(!from)return;
+    if(targetId===fromId){toast('不能连接到自己');return;}
+    if(type==='next'){from.next=targetId;toast('已设置默认下一场景');}
+    else if(type==='auto'){from.autoBranches=from.autoBranches||[];from.autoBranches.push({target:targetId,cond:''});toast('已添加自动分支，请在右侧设置条件');}
+    else if(type==='choice'){from.choices=from.choices||[];from.choices.push({id:uid('c'),text:'新选项',target:targetId,cond:'',setFlags:[]});toast('已添加选项分支，请在右侧编辑文字');}
+    selectedSceneId=from.id;
+    renderSceneList();renderInspector();renderFlow();saveEditor();
+  };
   const completeFlowLink=targetId=>{
     if(!pendingFlowLink)return;
-    const from=getScene(pendingFlowLink.from);
-    if(!from){pendingFlowLink=null;return;}
-    if(targetId===pendingFlowLink.from){toast('不能连接到自己');pendingFlowLink=null;hideCtx();renderFlow();return;}
-    if(pendingFlowLink.type==='next'){from.next=targetId;toast('已设置默认下一场景');}
-    else if(pendingFlowLink.type==='auto'){from.autoBranches=from.autoBranches||[];from.autoBranches.push({target:targetId,cond:''});toast('已添加自动分支，请在右侧设置条件');}
-    else if(pendingFlowLink.type==='choice'){from.choices=from.choices||[];from.choices.push({id:uid('c'),text:'新选项',target:targetId,cond:'',setFlags:[]});toast('已添加选项分支，请在右侧编辑文字');}
-    selectedSceneId=from.id;
+    finishLink(pendingFlowLink.from,pendingFlowLink.type,targetId);
     pendingFlowLink=null;hideCtx();
-    renderSceneList();renderInspector();renderFlow();saveEditor();
   };
   const cancelFlowLink=()=>{if(!pendingFlowLink)return;pendingFlowLink=null;hideCtx();renderFlow();toast('已取消连线');};
   function createSceneAndLink(fromId){
@@ -877,8 +929,42 @@ function initFlowEvents(){
     from.next=s.id;selectedSceneId=s.id;
     renderAll();saveEditor();toast('已创建新场景并连接');
   }
+  const portPosY=type=>type==='next'?24:(type==='auto'?40:56);
+  const startDragLink=(from,type,e)=>{
+    dragLink={from:from,type:type};
+    pendingFlowLink=null;hideCtx();
+    const src=getScene(from);
+    const p0=clientToWorld(e);
+    tempLine=document.createElementNS(SVGNS,'line');
+    tempLine.setAttribute('class','link-drag');
+    tempLine.setAttribute('x1',p0.x);tempLine.setAttribute('y1',p0.y);
+    tempLine.setAttribute('x2',p0.x);tempLine.setAttribute('y2',p0.y);
+    svg.appendChild(tempLine);
+    svg.setPointerCapture(e.pointerId);
+    toast('拖到目标场景后松开：'+(type==='next'?'默认下一场景':(type==='auto'?'自动分支':'选项分支')));
+  };
+  const updateDragLink=e=>{
+    if(!dragLink||!tempLine)return;
+    const src=getScene(dragLink.from);
+    const p=clientToWorld(e);
+    if(src){
+      tempLine.setAttribute('x1',src.x+NODE_W);
+      tempLine.setAttribute('y1',src.y+portPosY(dragLink.type));
+    }
+    tempLine.setAttribute('x2',p.x);tempLine.setAttribute('y2',p.y);
+  };
+  const endDragLink=e=>{
+    if(!dragLink)return;
+    const targetEl=e.target.closest&&e.target.closest('.node');
+    if(targetEl){finishLink(dragLink.from,dragLink.type,targetEl.dataset.id);}
+    else{toast('已取消拖拽连线');}
+    dragLink=null;
+    if(tempLine){try{svg.removeChild(tempLine);}catch(err){}tempLine=null;}
+  };
   svg.addEventListener('pointerdown',e=>{
     if(e.button!==0)return;
+    const portEl=e.target.closest&&e.target.closest('.flow-port');
+    if(portEl){e.preventDefault();e.stopPropagation();startDragLink(portEl.dataset.from,portEl.dataset.portType,e);return;}
     const nodeEl=e.target.closest&&e.target.closest('.node');
     if(nodeEl){
       const sc=getScene(nodeEl.dataset.id);if(sc){
@@ -891,10 +977,15 @@ function initFlowEvents(){
     }
   });
   svg.addEventListener('pointermove',e=>{
+    if(dragLink){updateDragLink(e);return;}
     if(dragNode){const w=clientToWorld(e);dragNode.x=Math.round(w.x-offX);dragNode.y=Math.round(w.y-offY);pointerMoved=true;renderFlow();}
     else if(panning){flowTx=panTX+(e.clientX-panSX);flowTy=panTY+(e.clientY-panSY);pointerMoved=true;applyFlowTransform();}
   });
-  const up=e=>{if(dragNode){dragNode=null;if(pointerMoved)saveEditor();}panning=false;};
+  const up=e=>{
+    if(dragLink){endDragLink(e);return;}
+    if(dragNode){dragNode=null;if(pointerMoved)saveEditor();}
+    panning=false;
+  };
   svg.addEventListener('pointerup',up);svg.addEventListener('pointercancel',up);
   svg.addEventListener('contextmenu',e=>{
     const nodeEl=e.target.closest&&e.target.closest('.node');
@@ -906,7 +997,7 @@ function initFlowEvents(){
       }
     }else{hideCtx();}
   });
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pendingFlowLink){e.preventDefault();cancelFlowLink();}});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(pendingFlowLink||dragLink)){e.preventDefault();if(pendingFlowLink)cancelFlowLink();if(dragLink){dragLink=null;if(tempLine){try{svg.removeChild(tempLine);}catch(err){}tempLine=null;}toast('已取消连线');}}});
   svg.addEventListener('wheel',e=>{e.preventDefault();const f=Math.exp(-e.deltaY*0.0012);flowK=Math.min(3,Math.max(0.15,flowK*f));applyFlowTransform();},{passive:false});
 }
 function autoLayout(){
@@ -2560,6 +2651,8 @@ function initEditorEvents(){
   $('#btnSaveDraft').onclick=saveDraft;
   $('#btnNew').onclick=()=>{if(confirm('新建项目会覆盖当前浏览器中的草稿（建议先导出 JSON 备份）。继续？')){newProject();renderAll();saveEditor();toast('已新建项目');}};
   $('#btnSample').onclick=()=>{if(confirm('载入示例项目会覆盖当前浏览器中的草稿（建议先导出 JSON 备份）。继续？')){project=migrateProject(sampleProject());selectedSceneId=project.startScene;renderAll();saveEditor();toast('已载入示例');}};
+  $('#btnHelp').onclick=()=>$('#helpModal').classList.remove('hidden');
+  $('#btnHelpClose').onclick=()=>$('#helpModal').classList.add('hidden');
   $('#btnPlay').onclick=()=>openPlayer(project);
   $('#btnPlayScene').onclick=()=>{if(selectedSceneId&&getScene(selectedSceneId)){openPlayer(project,selectedSceneId);}else{toast('请先在左侧选择一个场景');}};
   $('#btnImportDlgAppend').onclick=()=>importDialogues('append');
@@ -2603,6 +2696,7 @@ function initEditorEvents(){
   $('#btnAutoLayout').onclick=autoLayout;
   $('#btnAddScene').onclick=()=>{const sel=selectedScene();const s=defaultScene('新场景',sel?sel.x+260:120,sel?sel.y+100:100);project.scenes.push(s);selectedSceneId=s.id;renderAll();saveEditor();toast('已添加场景，可在右侧编辑');};
   $('#startSceneSel').addEventListener('change',e=>{project.startScene=e.target.value;renderSceneList();renderFlow();saveEditor();});
+  $('#sceneSearch').addEventListener('input',()=>renderSceneList());
   $('#btnExport').onclick=exportProject;
   $('#btnImport').onclick=()=>$('#importFile').click();
   $('#importFile').addEventListener('change',e=>{if(e.target.files[0])importProject(e.target.files[0]);e.target.value='';});
