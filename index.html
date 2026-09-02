@@ -78,7 +78,13 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
 .link-drag{stroke:#FB7299;stroke-width:2;stroke-dasharray:6 4;pointer-events:none;fill:none}
 #flowContextMenu{position:absolute;background:#FFFFFF;border:1px solid #E3E5E7;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:20;padding:6px;min-width:190px}
 #flowContextMenu button{display:block;width:100%;text-align:left;background:#FFFFFF;border:none;padding:8px 10px;font-size:13px;border-radius:7px;white-space:nowrap}
-#flowContextMenu button:hover{background:#F1F2F3}
+#tutorialSpotlight{position:fixed;z-index:240;border:2px solid #FB7299;border-radius:10px;box-shadow:0 0 0 9999px rgba(24,25,28,.42),0 0 0 5px rgba(251,114,153,.18);pointer-events:none;transition:all .22s ease}
+#tutorialCard{position:fixed;z-index:250;width:min(390px,calc(100vw - 28px));background:#FFFFFF;border:1px solid #F5A2B8;border-radius:14px;padding:18px;box-shadow:0 16px 40px rgba(24,25,28,.2)}
+#tutorialCard h3{font-size:17px;margin-bottom:8px;color:#18191C}
+#tutorialCard p{font-size:13px;line-height:1.7;color:#61666D;margin-bottom:12px}
+.tutorial-progress{height:5px;background:#F1F2F3;border-radius:99px;overflow:hidden;margin:10px 0 14px}.tutorial-progress i{display:block;height:100%;background:#FB7299;transition:width .2s}
+.tutorial-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}.tutorial-actions .hint{font-size:11px;flex:1}
+@media(max-width:760px){#tutorialCard{bottom:14px;left:14px!important;top:auto!important}.tutorial-actions{flex-wrap:wrap}#tutorialSpotlight{border-radius:8px}}
 .edge-label{fill:#61666D;font-size:11px;paint-order:stroke;stroke:#F4F5F7;stroke-width:4px;stroke-linejoin:round}
 #playerApp{position:fixed;inset:0;z-index:100;background:#F4F5F7}
 #gameScreen{position:absolute;inset:0}
@@ -209,10 +215,24 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
 /* ===== UX 优化：层级、响应式与可读性 ===== */
 :root{--accent:#FB7299;--accent-soft:#FFF0F4;--line:#E3E5E7;--muted:#61666D;--surface:#FFFFFF;--canvas:#F4F5F7}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(251,114,153,.28);outline-offset:2px}
-header{gap:6px;padding:8px 14px;height:auto;min-height:58px;align-content:center}
+header{gap:0;padding:10px 16px;height:auto;min-height:104px;display:flex;flex-direction:column;align-items:stretch;justify-content:center;background:rgba(255,255,255,.98);box-shadow:0 2px 10px rgba(24,25,28,.04);z-index:70}
 header button{white-space:nowrap}
-header .logo{font-size:15px}
-#projectTitle{min-width:150px;flex:0 1 220px}
+.header-row{display:flex;align-items:center;gap:7px;min-width:0}
+.header-row+.header-row{margin-top:8px;padding-top:8px;border-top:1px solid #F0F1F2}
+.header-brand{display:flex;align-items:center;gap:10px;min-width:0;margin-right:8px}
+header .logo{font-size:15px;line-height:1.2;white-space:nowrap}
+.header-kicker{font-size:10px;color:#9499A0;letter-spacing:.08em;white-space:nowrap}
+.header-divider{width:1px;height:24px;background:#E3E5E7;flex:none;margin:0 2px}
+.header-group{display:flex;align-items:center;gap:5px;min-width:0}
+.header-group-label{font-size:11px;color:#9499A0;margin-right:2px;white-space:nowrap}
+.header-grow{flex:1;min-width:8px}
+.header-primary button{font-weight:600}
+.header-primary #btnPlay{padding-left:14px;padding-right:14px}
+.header-primary #btnPlayScene{background:#FFF0F4;color:#FB7299}
+.header-secondary{overflow-x:auto;scrollbar-width:thin}
+.header-secondary .header-group{flex:none}
+.header-secondary button{font-size:12px;padding:6px 9px}
+#projectTitle{min-width:150px;flex:0 1 280px;font-weight:600}
 .panel-head{padding-top:14px}
 #sceneSearch{width:100%;padding:8px 10px;border-radius:8px}
 .scene-search-wrap{padding:4px 12px 8px}
@@ -224,7 +244,16 @@ header .logo{font-size:15px}
 @media (max-width:1100px){
   #scenePanel{width:220px}
   #inspector{width:320px}
-  header .logo{display:none}
+  header{min-height:104px}
+  header .logo{font-size:15px}
+  .header-row{flex-wrap:wrap}
+  .header-brand{flex:0 0 auto}
+  .header-kicker,.header-divider{display:none}
+  .header-primary #projectTitle{order:3;flex:1 1 180px}
+  .header-primary .header-grow{display:none}
+  .header-primary .header-group{margin-left:auto}
+  .header-secondary{flex-wrap:nowrap}
+  .header-secondary .header-group{flex:none}
 }
 @media (max-width:760px){
   body{overflow:auto}
@@ -232,8 +261,17 @@ header .logo{font-size:15px}
   header{position:sticky;top:0;z-index:80;box-shadow:0 2px 10px rgba(0,0,0,.06)}
   header span[style*="flex:1"]{display:none}
   header button{padding:7px 9px;font-size:12px}
-  #projectTitle{order:-1;flex:1 1 180px;width:auto}
-  .editor-main{display:block;min-height:calc(100vh - 80px)}
+  .header-primary #projectTitle{order:3;flex:1 1 180px}
+  .header-primary .header-grow{display:none}
+  .header-primary .header-group{margin-left:auto}
+  .header-primary #btnPlay{font-size:13px}
+  .header-primary #btnPlayScene{font-size:12px}
+  .header-secondary{flex-wrap:nowrap}
+  .header-secondary .header-group{flex:none}
+  .header-secondary .header-group-label{display:none}
+  .header-secondary button{padding:6px 8px}
+  .header-secondary .draft-status{display:none}
+
   #scenePanel{width:100%;height:auto;max-height:34vh;border-right:0;border-bottom:1px solid var(--line)}
   #sceneList{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;padding:4px 12px 10px}
   .scene-item{min-width:190px;margin:0}
@@ -249,24 +287,19 @@ header .logo{font-size:15px}
 <!-- ======================= 编辑器 ======================= -->
 <div id="editorApp">
   <header>
-    <span class="logo">🎬 Galgame 制作工坊</span>
-    <input id="projectTitle" placeholder="作品标题">
-    <button id="btnNew">新建</button>
-    <button id="btnSample">载入示例</button>
-    <button id="btnFlags">⚙ 数值管理</button>
-    <button id="btnCharModule">🎭 人物模块</button>
-    <button id="btnAutoLayout">自动布局</button>
-    <button id="btnOutline">📖 大纲 / 分支表</button>
-    <button id="btnUiSettings">🎨 UI 设置</button>
-    <button id="btnAi">🤖 AI 辅助</button>
-    <span style="flex:1"></span>
-    <button id="btnSaveDraft" title="将当前项目保存为浏览器本地草稿，关闭页面后再次打开可继续编辑">💾 保存草稿</button>
-    <span id="draftStatus" class="draft-status"></span>
-    <button id="btnExport">导出 JSON</button>
-    <button id="btnImport">导入 JSON</button>
-    <button id="btnPlay" class="primary">▶ 运行测试</button>
-    <button id="btnPlayScene" title="从当前选中的场景开始测试">▶ 测试当前场景</button>
-    <button id="btnHelp" title="查看快速上手指南">？ 帮助</button>
+    <div class="header-row header-primary">
+      <div class="header-brand"><span class="logo">🎬 Galgame 制作工坊</span><span class="header-kicker">VISUAL NOVEL WORKSPACE</span></div>
+      <div class="header-divider"></div>
+      <input id="projectTitle" placeholder="作品标题" aria-label="作品标题">
+      <span class="header-grow"></span>
+      <div class="header-group"><span class="header-group-label">试玩</span><button id="btnPlay" class="primary">▶ 运行测试</button><button id="btnPlayScene" title="从当前选中的场景开始测试">当前场景</button></div>
+      <button id="btnHelp" title="打开新手教程与功能说明">✨ 新手教程</button>
+    </div>
+    <div class="header-row header-secondary">
+      <div class="header-group"><span class="header-group-label">项目</span><button id="btnNew">新建</button><button id="btnSample">载入示例</button><button id="btnSaveDraft" title="将当前项目保存为浏览器本地草稿，关闭页面后再次打开可继续编辑">💾 保存</button><span id="draftStatus" class="draft-status"></span><button id="btnExport">导出</button><button id="btnImport">导入</button></div>
+      <div class="header-divider"></div>
+      <div class="header-group"><span class="header-group-label">设计</span><button id="btnFlags">⚙ 数值</button><button id="btnCharModule">🎭 人物</button><button id="btnOutline">📖 大纲</button><button id="btnAutoLayout">自动布局</button><button id="btnUiSettings">🎨 UI 设置</button><button id="btnAi">🤖 AI 辅助</button></div>
+    </div>
   </header>
   <div class="editor-main">
     <aside id="scenePanel">
@@ -529,8 +562,14 @@ header .logo{font-size:15px}
       6. <b>草稿 / 导出</b>：编辑内容会自动保存为浏览器本地草稿，关闭或刷新后再次打开会自动恢复；点「💾 保存草稿」可立即保存。项目也可导出为 JSON 文件永久保存，或再导入继续编辑。<br>
       7. <b>AI 辅助</b>：点击「🤖 AI 辅助」可配置你自己的 OpenAI 兼容 API，使用个人 AI 进行生图 / 文本生成等辅助操作，API Key 仅保存在本地浏览器。
     </div>
-    <div class="modal-actions"><button id="btnHelpClose" class="primary">知道了</button></div>
+    <div class="modal-actions"><button id="btnHelpTutorial" class="primary">✨ 开始新手教程</button><button id="btnHelpClose" class="primary">知道了</button></div>
   </div>
+</div>
+<div id="tutorialSpotlight" class="hidden"></div>
+<div id="tutorialCard" class="hidden" role="dialog" aria-live="polite" aria-label="新手教程">
+  <h3 id="tutorialTitle"></h3><p id="tutorialText"></p>
+  <div class="tutorial-progress"><i id="tutorialProgressBar"></i></div>
+  <div class="tutorial-actions"><span class="hint" id="tutorialStepLabel"></span><button id="tutorialPrev">上一步</button><button id="tutorialNext" class="primary">下一步</button><button id="tutorialSkip">跳过</button></div>
 </div>
 <div id="toast"></div>
 <script>
@@ -865,7 +904,7 @@ function renderFlow(){
     node.appendChild(rect);
     const name=document.createElementNS(SVGNS,'text');name.setAttribute('x',NODE_W/2);name.setAttribute('y',30);name.setAttribute('text-anchor','middle');name.setAttribute('class','nname');name.textContent=trunc(sc.name||sc.id,14);node.appendChild(name);
     const id=document.createElementNS(SVGNS,'text');id.setAttribute('x',NODE_W/2);id.setAttribute('y',50);id.setAttribute('text-anchor','middle');id.setAttribute('class','nid');id.textContent=sc.id;node.appendChild(id);
-    if(sc.ending){const star=document.createElementNS(SVGNS,'text');star.setAttribute('x',NODE_W-14);star.setAttribute('y',14);star.setAttribute('text-anchor','middle');star.setAttribute('class','nbadge');star.textContent='★';node.appendChild(star);}
+    if(sc.ending){const star=document.createElementNS(SVGNS,'text');star.setAttribute('x',NODE_W-14);star.setAttribute('y',20);star.setAttribute('text-anchor','middle');star.setAttribute('class','nbadge');star.textContent='★';node.appendChild(star);}
     [['next',24,'#9499A0','拖到目标场景：设为默认下一场景'],['auto',40,'#FFB800','拖到目标场景：添加自动分支'],['choice',56,'#00A1D6','拖到目标场景：添加选项分支']].forEach(([pt,py,color,tip])=>{
       const c=document.createElementNS(SVGNS,'circle');c.setAttribute('cx',NODE_W);c.setAttribute('cy',py);c.setAttribute('r',6);c.setAttribute('fill',color);c.setAttribute('stroke','#fff');c.setAttribute('stroke-width','2');c.setAttribute('class','flow-port');c.dataset.portType=pt;c.dataset.from=sc.id;
       const t=document.createElementNS(SVGNS,'title');t.textContent=tip;c.appendChild(t);
@@ -2645,7 +2684,51 @@ function importProject(file){
   reader.onload=()=>{try{project=migrateProject(JSON.parse(reader.result));selectedSceneId=project.startScene||(project.scenes[0]&&project.scenes[0].id)||null;renderAll();saveEditor();toast('导入成功');}catch(e){toast('导入失败：'+e.message);}};
   reader.readAsText(file);
 }
-/* ---------------- 初始化 ---------------- */
+/* ---------------- 新手教程 ---------------- */
+const tutorialSteps=[
+  {target:'#projectTitle',title:'1 / 9　先写作品标题',text:'在这里输入作品名。编辑内容会自动保存到浏览器草稿，也可以随时导出 JSON 备份。'},
+  {target:'#scenePanel',title:'2 / 9　管理场景',text:'左侧是场景列表：新建、搜索、选择起始场景。一个场景就是故事中的一个地点、时间段或剧情节点。'},
+  {target:'#canvasWrap',title:'3 / 9　用流程图组织剧情',text:'中间画布显示剧情关系。拖动节点调整位置，拖拽空白区域平移，滚轮缩放；右键节点可快捷创建分支或新场景。'},
+  {target:'#inspector',title:'4 / 9　编辑当前场景',text:'右侧属性面板负责填写背景、CG、BGM、台词、配音、角色、结局和场景跳转。选中左侧场景后，这里会自动切换。'},
+  {target:'#btnFlags',title:'5 / 9　制作数值分支',text:'数值管理用于创建好感度、勇气等 Flag。再在选项或自动分支中填写条件，例如：小夜好感 >= 2。'},
+  {target:'#btnCharModule',title:'6 / 9　设计角色演出',text:'人物模块支持立绘、抠图、PS 图层、动作、关键帧和伪 Live2D。场景中的每句台词还可以绑定角色与动作。'},
+  {target:'#btnOutline',title:'7 / 9　先规划故事',text:'大纲 / 分支表用于记录 Logline、故事摘要、路线规划和分支蓝图，适合正式制作前梳理结构。'},
+  {target:'#btnUiSettings',title:'8 / 9　调整游戏界面',text:'UI 设置可实时预览文本框、角色名牌、选项区和点击提示，并提供粉白、深色、纸张、极简四套预设。'},
+  {target:'#btnAi',title:'9 / 9　使用 AI 辅助',text:'AI 辅助支持图像、视频和文本生成。可分别配置兼容 API，并把结果应用到背景、立绘、CG 或台词。最后点击运行测试试玩。'}
+];
+let tutorialIndex=0;
+function endTutorial(){
+  $('#tutorialCard').classList.add('hidden');$('#tutorialSpotlight').classList.add('hidden');
+  localStorage.setItem('gvn_tutorial_seen_v1','1');
+}
+function positionTutorial(){
+  const step=tutorialSteps[tutorialIndex],el=$(step.target),spot=$('#tutorialSpotlight'),card=$('#tutorialCard');
+  if(!el){endTutorial();return;}
+  const r=el.getBoundingClientRect(),pad=4;
+  spot.classList.remove('hidden');spot.style.left=(r.left-pad)+'px';spot.style.top=(r.top-pad)+'px';spot.style.width=(r.width+pad*2)+'px';spot.style.height=(r.height+pad*2)+'px';
+  card.classList.remove('hidden');
+  const cr=card.getBoundingClientRect();let left=r.left,top=r.bottom+14;
+  if(left+cr.width>innerWidth-14)left=innerWidth-cr.width-14;
+  if(top+cr.height>innerHeight-14)top=Math.max(14,r.top-cr.height-14);
+  card.style.left=Math.max(14,left)+'px';card.style.top=Math.max(14,top)+'px';
+}
+function renderTutorial(){
+  const step=tutorialSteps[tutorialIndex];$('#tutorialTitle').textContent=step.title;$('#tutorialText').textContent=step.text;
+  $('#tutorialStepLabel').textContent='功能导览 · '+(tutorialIndex+1)+' / '+tutorialSteps.length;
+  $('#tutorialProgressBar').style.width=((tutorialIndex+1)/tutorialSteps.length*100)+'%';
+  $('#tutorialPrev').disabled=tutorialIndex===0;$('#tutorialNext').textContent=tutorialIndex===tutorialSteps.length-1?'完成':'下一步';
+  requestAnimationFrame(positionTutorial);
+}
+function startTutorial(){
+  $('#helpModal').classList.add('hidden');tutorialIndex=0;renderTutorial();
+}
+function initTutorial(){
+  $('#btnHelp').onclick=startTutorial;$('#btnHelpTutorial').onclick=startTutorial;$('#tutorialNext').onclick=()=>{if(tutorialIndex>=tutorialSteps.length-1)endTutorial();else{tutorialIndex++;renderTutorial();}};
+  $('#tutorialPrev').onclick=()=>{if(tutorialIndex>0){tutorialIndex--;renderTutorial();}};$('#tutorialSkip').onclick=endTutorial;
+  window.addEventListener('resize',()=>{if(!$('#tutorialCard').classList.contains('hidden'))positionTutorial();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#tutorialCard').classList.contains('hidden')){e.preventDefault();endTutorial();}});
+}
+
 function initEditorEvents(){
   $('#projectTitle').addEventListener('input',e=>{project.title=e.target.value;saveEditor();});
   $('#btnSaveDraft').onclick=saveDraft;
@@ -2757,10 +2840,12 @@ function boot(){
   renderAll();
   initEditorEvents();
   initPlayerEvents();
+  initTutorial();
   initFlowEvents();
   applyFlowTransform();
   $('#projectTitle').value=project.title||'';
   updateDraftStatus();
+  if(!draftInfo.restored&&!localStorage.getItem('gvn_tutorial_seen_v1')){setTimeout(startTutorial,450);}
   window.addEventListener('beforeunload',()=>{flushSaveEditor();});
   if(draftInfo.restored){toast('📝 已恢复上次编辑的草稿'+(draftInfo.savedAt?'（'+formatTime(draftInfo.savedAt)+'）':''));}
 }
