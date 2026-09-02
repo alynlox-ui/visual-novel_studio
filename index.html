@@ -27,6 +27,17 @@ header{height:58px;background:#FFFFFF;border-bottom:1px solid #E3E5E7;display:fl
 header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;color:#FB7299}
 #projectTitle{width:220px;font-weight:600}
 .draft-status{font-size:11px;color:#9499A0;white-space:nowrap}
+.hist-item{display:flex;align-items:center;gap:8px;border:1px solid #E3E5E7;background:#FFF;border-radius:9px;padding:8px 10px;margin-bottom:6px}
+.hist-item .h-main{flex:1;min-width:0}
+.hist-item .h-title{font-size:13px;color:#18191C;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.hist-item .h-sub{font-size:11px;color:#9499A0;margin-top:2px}
+.hist-tag{background:#FFF0F4;color:#C75C7E;font-size:10px;padding:1px 8px;border-radius:99px;flex:none}
+.hist-tag.auto{background:#FFF7E6;color:#B76E00}
+.hist-item .h-ops{flex:none;display:flex;gap:4px}
+.hist-diff{display:none;background:#FFF;border:1px solid #E3E5E7;border-radius:9px;padding:10px;font-size:12px;line-height:1.8;color:#18191C;margin-top:8px;white-space:pre-wrap;max-height:30vh;overflow-y:auto}
+.hist-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#F7F8FA;border:1px solid #E3E5E7;border-radius:9px;padding:8px;margin:10px 0 4px}
+.hist-toolbar input[type=text]{padding:5px 8px;font-size:12px;flex:1;min-width:90px}
+.batch-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.batch-card{border:1px solid #E3E5E7;border-radius:10px;padding:12px;background:#F7F8FA}.batch-card h4{margin-bottom:8px;color:#18191C}.batch-card label{display:block;margin:7px 0 4px}.batch-card input,.batch-card select{width:100%}.batch-result{margin-top:10px;border-radius:8px;padding:9px;background:#FFF7E6;color:#7A5200;white-space:pre-wrap;line-height:1.6;font-size:12px}.batch-preview{max-height:24vh;overflow:auto;background:#FFF;border:1px solid #E3E5E7;border-radius:8px;padding:8px;margin-top:8px;font-size:12px;white-space:pre-wrap}.batch-check{display:flex!important;align-items:center;gap:6px}.batch-check input{width:auto}
 #btnPlay{background:#FB7299}
 #btnPlay:hover{background:#FC8BAB}
 .editor-main{display:flex;flex:1;min-height:0}
@@ -296,7 +307,7 @@ header .logo{font-size:15px;line-height:1.2;white-space:nowrap}
       <button id="btnHelp" title="打开新手教程与功能说明">✨ 新手教程</button>
     </div>
     <div class="header-row header-secondary">
-      <div class="header-group"><span class="header-group-label">项目</span><button id="btnNew">新建</button><button id="btnSample">载入示例</button><button id="btnSaveDraft" title="将当前项目保存为浏览器本地草稿，关闭页面后再次打开可继续编辑">💾 保存</button><span id="draftStatus" class="draft-status"></span><button id="btnExport">导出</button><button id="btnImport">导入</button></div>
+      <div class="header-group"><span class="header-group-label">项目</span><button id="btnUndo" title="撤销 (Ctrl+Z)">↩ 撤销</button><button id="btnRedo" title="重做 (Ctrl+Y)">↪ 重做</button><button id="btnHist" title="项目版本快照：回滚 / 对比 / 历史备份">🗂 版本</button><button id="btnBatch" title="批量替换文本和调整数值">⚡ 批量</button><button id="btnNew">新建</button><button id="btnSample">载入示例</button><button id="btnSaveDraft" title="将当前项目保存为浏览器本地草稿，关闭页面后再次打开可继续编辑">💾 保存</button><span id="draftStatus" class="draft-status"></span><button id="btnExport">导出</button><button id="btnImport">导入</button></div>
       <div class="header-divider"></div>
       <div class="header-group"><span class="header-group-label">设计</span><button id="btnFlags">⚙ 数值</button><button id="btnCharModule">🎭 人物</button><button id="btnOutline">📖 大纲</button><button id="btnAutoLayout">自动布局</button><button id="btnUiSettings">🎨 UI 设置</button><button id="btnAi">🤖 AI 辅助</button></div>
     </div>
@@ -342,6 +353,7 @@ header .logo{font-size:15px;line-height:1.2;white-space:nowrap}
       <button id="btnSave">💾 存档</button>
       <button id="btnLoad">📂 读档</button>
       <button id="btnDemo">🎭 演示模式</button>
+      <button id="sfxBtnTop" class="sfx-btn" type="button" title="音效开关">🔊</button>
       <select id="speedSel" title="文字速度">
         <option value="0">瞬间</option>
         <option value="15" selected>快</option>
@@ -364,6 +376,7 @@ header .logo{font-size:15px;line-height:1.2;white-space:nowrap}
     <div class="title-btns">
       <button id="btnStartGame" class="primary" style="font-size:17px;padding:12px 30px">开始游戏</button>
       <button id="btnTitleEditor" style="font-size:15px;padding:12px 22px">返回编辑器</button>
+      <button id="sfxBtnTitle" class="sfx-btn" type="button" title="音效开关">🔊</button>
     </div>
   </div>
   <div id="endingScreen" class="hidden">
@@ -373,6 +386,7 @@ header .logo{font-size:15px;line-height:1.2;white-space:nowrap}
       <button id="btnRestart" class="primary">重新开始</button>
       <button id="btnEndingTitle">回到标题</button>
       <button id="btnEndingEditor">返回编辑器</button>
+      <button id="sfxBtnEnd" class="sfx-btn" type="button" title="音效开关">🔊</button>
     </div>
   </div>
   <div id="backlogPanel" class="hidden">
@@ -391,7 +405,51 @@ header .logo{font-size:15px;line-height:1.2;white-space:nowrap}
     </div>
   </div>
 </div>
+<!-- 批量操作模态 -->
+<div id="batchModal" class="modal hidden">
+  <div class="modal-box" style="width:min(860px,96vw)">
+    <h3>⚡ 批量操作 <span class="hint" style="font-weight:normal">所有应用都支持 Ctrl+Z 撤销</span></h3>
+    <div class="batch-grid">
+      <section class="batch-card">
+        <h4>🔤 全文查找与替换</h4>
+        <label>查找内容<input id="batchFind" type="text" placeholder="例如：旧角色名"></label>
+        <label>替换为<input id="batchReplace" type="text" placeholder="例如：新角色名"></label>
+        <label class="batch-check"><input id="batchCase" type="checkbox"> 区分大小写</label>
+        <label class="batch-check"><input id="batchRegex" type="checkbox"> 使用正则表达式</label>
+        <div id="batchFindResult" class="batch-result">输入查找内容后点击预览</div>
+        <div class="modal-actions"><button id="btnBatchPreviewText">预览匹配</button><button id="btnBatchApplyText" class="primary">应用替换</button></div>
+      </section>
+      <section class="batch-card">
+        <h4>🔢 批量调整数值</h4>
+        <label>目标数值<select id="batchFlag"></select></label>
+        <label>调整方式<select id="batchFlagOp"><option value="add">增加</option><option value="sub">减少</option><option value="set">设为</option><option value="mul">乘以</option></select></label>
+        <label>数值<input id="batchFlagVal" type="number" step="any" value="1"></label>
+        <label class="batch-check"><input id="batchIncludeInit" type="checkbox" checked> 同时调整项目初始值</label>
+        <div id="batchFlagResult" class="batch-result">将统计并调整所有场景/选项中的该数值操作。</div>
+        <div class="modal-actions"><button id="btnBatchApplyFlag" class="primary">应用调整</button></div>
+      </section>
+    </div>
+    <div id="batchPreview" class="batch-preview hidden"></div>
+    <div class="modal-actions"><button id="btnBatchClose">关闭</button></div>
+  </div>
+</div>
 <!-- 人物模块模态 -->
+<!-- 版本历史模态 -->
+<div id="histModal" class="modal hidden">
+  <div class="modal-box" style="width:min(780px,96vw)">
+    <h3>🗂 项目版本历史 <span class="hint" id="histCount" style="font-weight:normal"></span></h3>
+    <div class="hist-toolbar">
+      <input type="text" id="histTagInp" placeholder="标签，如：结局分支定稿" maxlength="30">
+      <input type="text" id="histNoteInp" placeholder="备注（可选）" maxlength="60">
+      <button id="btnHistNew" class="mini primary">＋ 建快照</button>
+      <button id="btnHistCompare" class="mini" disabled>对比所选（0/2）</button>
+    </div>
+    <div class="hint" style="margin:2px 2px 8px">自动快照发生在「新建 / 载入示例 / 导入」覆盖之前；快照存在本浏览器（优先 IndexedDB，大项目更安全）。对比需勾选两份。</div>
+    <div id="histList" style="max-height:44vh;overflow-y:auto"></div>
+    <div id="histDiff" class="hist-diff"></div>
+    <div class="modal-actions"><button id="btnHistClose">关闭</button></div>
+  </div>
+</div>
 <div id="charModal" class="modal hidden">
   <div class="modal-box" style="width:min(880px,96vw)">
     <h3>🎭 人物模块（立绘 / 抠图 / 动作设计 / 伪Live2D）</h3>
@@ -590,12 +648,30 @@ function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function trunc(s,n){s=String(s||'');return s.length>n?s.slice(0,n)+'…':s;}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.style.opacity=1;clearTimeout(t._tmr);t._tmr=setTimeout(()=>t.style.opacity=0,1800);}
 /* ---------------- 安全条件表达式求值器 ---------------- */
+/* 内置条件函数：chance 随机 / hourBetween 真实小时区间 / sceneRead 场景已读 /
+   endingSeen 结局已解锁 / abs 绝对值（含 P 的调用在编辑器校验阶段安全返回 false/0） */
+const COND_FNS={
+  chance(p){p=Number(p)||0;return Math.random()*100<Math.min(100,Math.max(0,p));},
+  hourBetween(a,b){const h=new Date().getHours();a=Number(a)||0;b=Number(b)||0;return a<=b?(h>=a&&h<=b):(h>=a||h<=b);},
+  hourNow(){return new Date().getHours();},
+  minuteNow(){return new Date().getMinutes();},
+  sceneRead(id){return !!(P&&P.readScenes&&P.project&&id&&P.readScenes.has(String(id)));},
+  sceneCount(){return (P&&P.project&&Array.isArray(P.project.scenes))?P.project.scenes.length:0;},
+  endings(){return (P&&Array.isArray(P.unlockedEndings))?P.unlockedEndings.length:0;},
+  endingSeen(kind,title){
+    if(!P||!Array.isArray(P.unlockedEndings))return false;
+    const k=String(kind||'');
+    if(title!==undefined)return P.unlockedEndings.indexOf(k+'|'+title)>=0;
+    return P.unlockedEndings.some(x=>String(x).split('|')[0]===k);
+  },
+  abs(n){return Math.abs(Number(n)||0);}
+};
 class ExprParser{
   constructor(src){this.src=String(src||'');this.pos=0;this.len=this.src.length;this.flags={};}
   parse(){this.ws();const v=this.or();this.ws();if(this.pos<this.len)throw new Error('无法解析："'+this.src.slice(this.pos)+'"');return v;}
   ws(){while(this.pos<this.len&&/\s/.test(this.src[this.pos]))this.pos++;}
-  or(){let l=this.and();while(true){this.ws();if(this.src.startsWith('||',this.pos)){this.pos+=2;l=l||this.and();}else break;}return l;}
-  and(){let l=this.eq();while(true){this.ws();if(this.src.startsWith('&&',this.pos)){this.pos+=2;l=l&&this.eq();}else break;}return l;}
+  or(){let l=this.and();while(true){this.ws();if(this.src.startsWith('||',this.pos)){this.pos+=2;const r=this.and();l=l||r;}else break;}return l;}
+  and(){let l=this.eq();while(true){this.ws();if(this.src.startsWith('&&',this.pos)){this.pos+=2;const r=this.eq();l=l&&r;}else break;}return l;}
   eq(){let l=this.rel();while(true){this.ws();if(this.src.startsWith('==',this.pos)){this.pos+=2;l=(l==this.rel());}else if(this.src.startsWith('!=',this.pos)){this.pos+=2;l=(l!=this.rel());}else break;}return l;}
   rel(){let l=this.add();while(true){this.ws();if(this.src.startsWith('>=',this.pos)){this.pos+=2;l=(l>=this.add());}else if(this.src.startsWith('<=',this.pos)){this.pos+=2;l=(l<=this.add());}else if(this.src.startsWith('>',this.pos)){this.pos+=1;l=(l>this.add());}else if(this.src.startsWith('<',this.pos)){this.pos+=1;l=(l<this.add());}else break;}return l;}
   add(){let l=this.mul();while(true){this.ws();const c=this.src[this.pos];if(c==='+'){this.pos++;l=l+this.mul();}else if(c==='-'){this.pos++;l=l-this.mul();}else break;}return l;}
@@ -608,8 +684,31 @@ class ExprParser{
     const num=this.src.slice(this.pos).match(/^(\d+(\.\d+)?|\.\d+)/);
     if(num){this.pos+=num[0].length;return parseFloat(num[0]);}
     const id=this.src.slice(this.pos).match(/^[\u4e00-\u9fa5A-Za-z_][\u4e00-\u9fa5A-Za-z0-9_]*/);
-    if(id){this.pos+=id[0].length;const n=id[0];if(n==='true')return true;if(n==='false')return false;
-      return (n in this.flags)?Number(this.flags[n]):0;}
+    if(id){
+      this.pos+=id[0].length;const n=id[0];
+      if(n==='true')return true;if(n==='false')return false;
+      this.ws();
+      if(this.src[this.pos]==='('){
+        this.pos++;
+        const args=[];
+        this.ws();
+        if(this.src[this.pos]===')'){this.pos++;}
+        else{
+          while(true){
+            args.push(this.or());
+            this.ws();
+            const cc=this.src[this.pos];
+            if(cc===','){this.pos++;continue;}
+            if(cc===')'){this.pos++;break;}
+            throw new Error('函数参数语法错误：'+n);
+          }
+        }
+        const fn=COND_FNS[n];
+        if(typeof fn!=='function')throw new Error('未知条件函数：'+n);
+        return fn.apply(null,args);
+      }
+      return (n in this.flags)?Number(this.flags[n]):0;
+    }
     throw new Error('无法解析："'+this.src.slice(this.pos)+'"');
   }
 }
@@ -691,12 +790,230 @@ function persistEditorDraft(){
 }
 function saveEditor(){
   if(draftSaveTimer)clearTimeout(draftSaveTimer);
-  draftSaveTimer=setTimeout(()=>{draftSaveTimer=null;persistEditorDraft();},400);
+  draftSaveTimer=setTimeout(()=>{draftSaveTimer=null;if(project)commitUndoSnapshot();persistEditorDraft();},400);
   return true;
+}
+/* ---------------- 编辑器撤销 / 重做（内存快照栈，随草稿提交点记录） ---------------- */
+let undoStack=[],redoStack=[];
+const UNDO_LIMIT=60;
+function commitUndoSnapshot(){
+  if(!project)return;
+  const s=JSON.stringify(project);
+  if(undoStack[undoStack.length-1]===s)return;
+  if(undoStack.length>=UNDO_LIMIT)undoStack.shift();
+  undoStack.push(s);redoStack=[];
+  updateUndoButtons();
+}
+function editorResetBaseline(){undoStack=[];redoStack=[];commitUndoSnapshot();updateUndoButtons();}
+function editorJson(){return JSON.stringify(project);}
+function restoreEditorState(json){
+  project=migrateProject(JSON.parse(json));
+  if(!project.scenes.some(s=>s.id===selectedSceneId)){selectedSceneId=project.startScene||(project.scenes[0]&&project.scenes[0].id)||null;}
+  $('#projectTitle').value=project.title||'';
+  renderAll();flushSaveEditor();
+}
+function undoEditor(){
+  if(!project||undoStack.length<2){toast('没有可撤销的操作');return;}
+  redoStack.push(editorJson());
+  undoStack.pop();
+  const prev=undoStack[undoStack.length-1];
+  restoreEditorState(prev);
+  updateUndoButtons();
+  toast('↩ 已撤销（剩余 '+(undoStack.length-1)+' 步）');
+}
+function redoEditor(){
+  if(!redoStack.length){toast('没有可重做的操作');return;}
+  const nxt=redoStack.pop();
+  undoStack.push(nxt);
+  restoreEditorState(nxt);
+  updateUndoButtons();
+  toast('↪ 已重做（可重做 '+redoStack.length+' 步）');
+}
+function updateUndoButtons(){
+  const u=$('#btnUndo'),r=$('#btnRedo');
+  if(u){u.disabled=undoStack.length<=1;u.title='撤销 (Ctrl+Z)'+(undoStack.length>1?'：'+(undoStack.length-1)+' 步可用':'');}
+  if(r){r.disabled=!redoStack.length;r.title='重做 (Ctrl+Y)'+(redoStack.length?'：'+redoStack.length+' 步可用':'');}
 }
 function flushSaveEditor(){
   if(draftSaveTimer){clearTimeout(draftSaveTimer);draftSaveTimer=null;}
   return persistEditorDraft();
+}
+/* ---------------- 项目版本历史：快照 / 回滚 / 对比 ----------------
+   存储：优先 IndexedDB(gvn_hist_db)，不可用时退回 localStorage；
+   自动快照时机：新建 / 载入示例 / 导入覆盖之前（防误操作丢失）。
+   约束：单份 JSON ≤ 512KB 才记录；总量 ≤ 4MB；最多 40 份（先淘汰最旧）。 */
+const HIST_DB='gvn_hist_db',HIST_STORE='vers',HIST_LIMIT=40,HIST_MAX_JSON=512*1024,HIST_MAX_TOTAL=4*1024*1024;
+function histIdb(){return (typeof indexedDB!=='undefined')?indexedDB:null;}
+function histProjectKey(){return 'gvn_hist_'+project.id;}
+function histOpenDb(){
+  return new Promise((res,rej)=>{
+    try{
+      const req=histIdb().open(HIST_DB,1);
+      req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains(HIST_STORE))d.createObjectStore(HIST_STORE,{keyPath:'key'});};
+      req.onsuccess=()=>res(req.result);
+      req.onerror=()=>rej(req.error);
+    }catch(e){rej(e);}
+  });
+}
+async function histStorageGet(key){
+  if(histIdb()){
+    try{
+      const d=await histOpenDb();
+      const v=await new Promise((res,rej)=>{const tx=d.transaction(HIST_STORE,'readonly');const r=tx.objectStore(HIST_STORE).get(key);r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error);});
+      return v;
+    }catch(e){console.warn('历史 IDB 读取失败，退回 localStorage',e);}
+  }
+  try{return JSON.parse(localStorage.getItem(key));}catch(e){return null;}
+}
+async function histStorageSet(key,val){
+  if(histIdb()){
+    try{
+      const d=await histOpenDb();
+      await new Promise((res,rej)=>{const tx=d.transaction(HIST_STORE,'readwrite');tx.objectStore(HIST_STORE).put(val);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});
+      return true;
+    }catch(e){console.warn('历史 IDB 写入失败，退回 localStorage',e);}
+  }
+  try{localStorage.setItem(key,JSON.stringify(val));return true;}catch(e){console.warn('历史存储失败（可能超出容量）',e);return false;}
+}
+async function histLoad(){const key=histProjectKey();const rec=await histStorageGet(key);if(rec&&Array.isArray(rec.versions))return rec;return {key:key,versions:[]};}
+async function histPersist(rec){return histStorageSet(rec.key||histProjectKey(),rec);}
+function histMetaOf(json){
+  try{const p=JSON.parse(json);return {title:p.title||'',scenes:Array.isArray(p.scenes)?p.scenes.length:0,chars:Array.isArray(p.characters)?p.characters.length:0};}
+  catch(e){return {title:'',scenes:0,chars:0};}
+}
+async function histSnapshot(opts){
+  if(!project)return null;
+  const json=JSON.stringify(project);
+  if(json.length>HIST_MAX_JSON){toast('⚠ 项目体积过大（'+(json.length/1024).toFixed(0)+' KB），无法记入快照，请用「导出 JSON」做文件备份');return null;}
+  const rec=await histLoad();
+  if(rec.versions[0]&&rec.versions[0].json===json)return rec.versions[0];
+  const meta=histMetaOf(json);
+  const v={id:uid('v'),time:new Date().toISOString(),tag:(opts&&opts.tag)||'',note:(opts&&opts.note)||'',auto:!!(opts&&opts.auto),json:json,title:meta.title,scenes:meta.scenes,chars:meta.chars};
+  rec.versions.unshift(v);
+  let total=0;const keep=[];
+  for(const x of rec.versions){if(keep.length>=HIST_LIMIT)break;total+=x.json.length;if(total>HIST_MAX_TOTAL)break;keep.push(x);}
+  rec.versions=keep;
+  await histPersist(rec);
+  return v;
+}
+async function histSnapshotAuto(reason){
+  const v=await histSnapshot({auto:true,note:reason||''});
+  if(v)toast('🗂 已自动快照（'+reason+'）');
+  return v;
+}
+function histTimeStr(iso){try{return new Date(iso).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(e){return '';}}
+function histKB(n){const kb=(n||0)/1024;return kb>1024?(kb/1024).toFixed(1)+' MB':kb.toFixed(0)+' KB';}
+function histScenesSummary(p){const ids=(p.scenes||[]).map(s=>s.name||s.id);return ids.slice(0,5).join('、')+(ids.length>5?' 等 '+(ids.length)+' 个场景':'');}
+async function histRestore(id){
+  const rec=await histLoad();
+  const v=rec.versions.find(x=>x.id===id);
+  if(!v){toast('快照不存在或已被清理');return;}
+  if(!confirm('确定回滚到「'+(v.tag||histTimeStr(v.time))+'」？当前状态会丢失（可先手动建快照再回滚）。'))return;
+  project=migrateProject(JSON.parse(v.json));
+  if(!project.scenes.some(s=>s.id===selectedSceneId))selectedSceneId=project.startScene||(project.scenes[0]&&project.scenes[0].id)||null;
+  $('#projectTitle').value=project.title||'';
+  renderAll();flushSaveEditor();editorResetBaseline();
+  toast('↩ 已回滚到 '+(v.tag||histTimeStr(v.time)));
+  renderHistList();
+}
+async function histDelete(id){
+  const rec=await histLoad();
+  rec.versions=rec.versions.filter(x=>x.id!==id);
+  await histPersist(rec);
+  toast('已删除该快照');
+  renderHistList();
+}
+async function openHistModal(){$('#histModal').classList.remove('hidden');$('#histDiff').style.display='none';await renderHistList();}
+function closeHistModal(){$('#histModal').classList.add('hidden');}
+async function renderHistList(){
+  const rec=await histLoad();
+  const box=$('#histList');if(!box)return;
+  const cnt=$('#histCount');if(cnt)cnt.textContent='共 '+rec.versions.length+' 份';
+  if(!rec.versions.length){
+    box.innerHTML='<p class="hint">还没有快照。新建 / 载入示例 / 导入前会自动保存，也可以在上方填标签后点「＋ 建快照」手动保存，防止改乱后无法找回。</p>';
+    $('#btnHistCompare').disabled=true;$('#btnHistCompare').textContent='对比所选（0/2）';
+    return;
+  }
+  box.innerHTML='';
+  rec.versions.forEach(v=>{
+    const el=document.createElement('div');el.className='hist-item';
+    el.innerHTML=`<input type="checkbox" class="h-radio" title="勾选两份可对比">
+      <div class="h-main">
+        <div class="h-title"><span class="hist-tag ${v.auto?'auto':''}">${v.auto?'自动':'手动'}</span><b>${esc(v.tag||'(未命名)')}</b>${v.note?'<span class="hint">'+esc(v.note)+'</span>':''}</div>
+        <div class="h-sub">${histTimeStr(v.time)} · ${esc(v.title||'未命名')} · ${v.scenes} 场景 · ${v.chars} 人物 · ${histKB(v.json.length)}</div>
+      </div>
+      <div class="h-ops">
+        <button class="mini primary" data-hact="restore" data-hid="${v.id}">↩ 回滚</button>
+        <button class="mini danger" data-hact="del" data-hid="${v.id}">✕</button>
+      </div>`;
+    box.appendChild(el);
+  });
+  histSyncCompareUI();
+}
+function histSelectedIds(){
+  return Array.from($$('#histList .h-radio')).filter(b=>b.checked).map(b=>b.closest('.hist-item').querySelector('[data-hid]').dataset.hid);
+}
+function histSyncCompareUI(){
+  const ids=histSelectedIds();
+  const btn=$('#btnHistCompare');
+  if(btn){btn.disabled=ids.length!==2;btn.textContent='对比所选（'+ids.length+'/2）';}
+}
+async function histCompare(){
+  const ids=histSelectedIds();
+  if(ids.length!==2){toast('请勾选恰好两份快照进行对比');return;}
+  const rec=await histLoad();
+  const A=rec.versions.find(x=>x.id===ids[0]),B=rec.versions.find(x=>x.id===ids[1]);
+  if(!A||!B){toast('快照缺失');return;}
+  const pa=migrateProject(JSON.parse(A.json)),pb=migrateProject(JSON.parse(B.json));
+  const mA=new Map(pa.scenes.map(s=>[s.id,s])),mB=new Map(pb.scenes.map(s=>[s.id,s]));
+  const add=[],rem=[],mod=[];
+  mB.forEach((s,id)=>{
+    if(!mA.has(id)){add.push(s.name||id);return;}
+    const a=mA.get(id);const bits=[];
+    if(a.name!==s.name)bits.push('名称');
+    const txA=String(a.text||'')+(a.dialogues||[]).map(d=>d.text||'').join('')+(a.choices||[]).map(c=>c.text||'').join('');
+    const txB=String(s.text||'')+(s.dialogues||[]).map(d=>d.text||'').join('')+(s.choices||[]).map(c=>c.text||'').join('');
+    if(txA!==txB)bits.push('台词');
+    if(JSON.stringify(a.autoBranches||[])!==JSON.stringify(s.autoBranches||[]))bits.push('自动分支');
+    if(JSON.stringify(a.choices||[])!==JSON.stringify(s.choices||[]))bits.push('选项结构');
+    if((a.characters||[]).length!==(s.characters||[]).length)bits.push('角色数');
+    if((a.bg||'')!==(s.bg||'')||(a.bgImage||'')!==(s.bgImage||''))bits.push('背景');
+    if(JSON.stringify(a.setFlags||[])!==JSON.stringify(s.setFlags||[]))bits.push('数值变更');
+    if(bits.length)mod.push((s.name||id)+'（'+bits.join('/')+'）');
+  });
+  mA.forEach((s,id)=>{if(!mB.has(id))rem.push(s.name||id);});
+  const fA=JSON.stringify(pa.flags||{}),fB=JSON.stringify(pb.flags||{});
+  const lines=[];
+  lines.push('对比：'+histTimeStr(A.time)+(A.tag?'「'+A.tag+'」':'')+'  →  '+histTimeStr(B.time)+(B.tag?'「'+B.tag+'」':''));
+  lines.push('作品标题：'+(pa.title||'未命名')+' → '+(pb.title||'未命名')+(pa.title!==pb.title?'（已改名）':''));
+  lines.push('新增场景 '+add.length+' 个'+(add.length?'：'+add.slice(0,10).join('、'):''));
+  lines.push('删除场景 '+rem.length+' 个'+(rem.length?'：'+rem.slice(0,10).join('、'):''));
+  lines.push('修改场景 '+mod.length+' 个'+(mod.length?'：'+mod.slice(0,10).join('；'):''));
+  lines.push('全局数值（初始值）：'+(fA===fB?'无变化':'有变化'));
+  const box=$('#histDiff');
+  if(box){box.style.display='block';box.textContent=lines.join('\n');}
+  toast('对比完成');
+}
+function bindHistEvents(){
+  $('#btnHist').onclick=openHistModal;
+  $('#btnHistClose').onclick=closeHistModal;
+  $('#btnHistNew').onclick=async()=>{
+    const tag=($('#histTagInp').value||'').trim();
+    const note=($('#histNoteInp').value||'').trim();
+    const v=await histSnapshot({tag:tag||('手动快照 '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})),note:note,auto:false});
+    if(v){$('#histTagInp').value='';$('#histNoteInp').value='';toast('✅ 已保存快照');renderHistList();}
+  };
+  $('#btnHistCompare').onclick=histCompare;
+  $('#histList').addEventListener('click',e=>{
+    const btn=e.target.closest('button[data-hact]');
+    if(!btn)return;
+    const id=btn.dataset.hid;
+    if(btn.dataset.hact==='restore')histRestore(id);
+    else if(btn.dataset.hact==='del')histDelete(id);
+  });
+  $('#histList').addEventListener('change',e=>{
+    if(e.target&&e.target.classList&&e.target.classList.contains('h-radio'))histSyncCompareUI();
+  });
 }
 function formatTime(iso){try{const d=new Date(iso);return d.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
 function updateDraftStatus(failed){
@@ -751,8 +1068,8 @@ function renderSceneList(){
 }
 function condBoxHTML(role,idx,owner,val,flags){
   return `<div class="cond-box">
-    <input type="text" data-role="${role}" data-idx="${idx}" data-owner="${owner}" value="${esc(val)}" placeholder="留空表示无条件；如：小夜好感 >= 2" spellcheck="false">
-    <div class="chips">${flags.map(f=>`<button type="button" class="chip" data-insert="${esc(f)}">${esc(f)}</button>`).join('')}<button type="button" class="chip op" data-insert="&gt;=">≥</button><button type="button" class="chip op" data-insert="&lt;=">≤</button><button type="button" class="chip op" data-insert="==">=</button><button type="button" class="chip op" data-insert="!=">≠</button><button type="button" class="chip op" data-insert="&gt;">&gt;</button><button type="button" class="chip op" data-insert="&lt;">&lt;</button><button type="button" class="chip op" data-insert="&amp;&amp;">且</button><button type="button" class="chip op" data-insert="||">或</button></div>
+    <input type="text" data-role="${role}" data-idx="${idx}" data-owner="${owner}" value="${esc(val)}" placeholder="留空表示无条件；如：小夜好感 >= 2；支持 chance(30) / hourBetween(18,23) / sceneRead(&quot;场景id&quot;) / endingSeen(&quot;good&quot;)" spellcheck="false">
+    <div class="chips">${flags.map(f=>`<button type="button" class="chip" data-insert="${esc(f)}">${esc(f)}</button>`).join('')}<button type="button" class="chip op" data-insert="&gt;=">≥</button><button type="button" class="chip op" data-insert="&lt;=">≤</button><button type="button" class="chip op" data-insert="==">=</button><button type="button" class="chip op" data-insert="!=">≠</button><button type="button" class="chip op" data-insert="&gt;">&gt;</button><button type="button" class="chip op" data-insert="&lt;">&lt;</button><button type="button" class="chip op" data-insert="&amp;&amp;">且</button><button type="button" class="chip op" data-insert="||">或</button><button type="button" class="chip op" data-insert="chance(30)">随机30%</button><button type="button" class="chip op" data-insert="hourBetween(18,23)">时间段</button><button type="button" class="chip op" data-insert="sceneRead(&quot;s_xxx&quot;)">到过场景</button><button type="button" class="chip op" data-insert="endingSeen(&quot;good&quot;)">解锁结局</button></div>
   </div>`;
 }
 function flagRowHTML(r,owner,idx,flags){
@@ -780,10 +1097,10 @@ function inspectorHTML(){
   const sceneOpts=project.scenes.map(s=>`<option value="${esc(s.id)}" ${sc.next===s.id?'selected':''}>${esc(s.name||s.id)}</option>`).join('');
   const endingKinds=[['good','好结局'],['normal','普通结局'],['bad','坏结局'],['true','真结局'],['custom','自定义']];
   const autoRows=(sc.autoBranches||[]).map((ab,i)=>`<div class="choice-card">
-    <div class="row"><input type="text" data-role="autoCond" data-idx="${i}" value="${esc(ab.cond)}" placeholder="条件，如 小夜好感 >= 2" style="flex:2" spellcheck="false">
+    <div class="row"><input type="text" data-role="autoCond" data-idx="${i}" value="${esc(ab.cond)}" placeholder="条件：小夜好感 >= 2；chance(30)；sceneRead(&quot;场景id&quot;)" style="flex:2" spellcheck="false">
     <select data-role="autoTarget" data-idx="${i}" style="flex:1.4">${project.scenes.map(s=>`<option value="${esc(s.id)}" ${ab.target===s.id?'selected':''}>${esc(s.name||s.id)}</option>`).join('')}</select>
     <button class="mini danger" data-role="delAuto" data-idx="${i}">✕</button></div>
-    <div class="chips">${flags.map(f=>`<button type="button" class="chip" data-insert="${esc(f)}">${esc(f)}</button>`).join('')}<button type="button" class="chip op" data-insert="&gt;=">≥</button><button type="button" class="chip op" data-insert="&lt;=">≤</button><button type="button" class="chip op" data-insert="==">=</button><button type="button" class="chip op" data-insert="!=">≠</button><button type="button" class="chip op" data-insert="&amp;&amp;">且</button><button type="button" class="chip op" data-insert="||">或</button></div>
+    <div class="chips">${flags.map(f=>`<button type="button" class="chip" data-insert="${esc(f)}">${esc(f)}</button>`).join('')}<button type="button" class="chip op" data-insert="&gt;=">≥</button><button type="button" class="chip op" data-insert="&lt;=">≤</button><button type="button" class="chip op" data-insert="==">=</button><button type="button" class="chip op" data-insert="!=">≠</button><button type="button" class="chip op" data-insert="&gt;">&gt;</button><button type="button" class="chip op" data-insert="&lt;">&lt;</button><button type="button" class="chip op" data-insert="&amp;&amp;">且</button><button type="button" class="chip op" data-insert="||">或</button><button type="button" class="chip op" data-insert="chance(30)">随机30%</button><button type="button" class="chip op" data-insert="hourBetween(18,23)">时间段</button><button type="button" class="chip op" data-insert="sceneRead(&quot;s_xxx&quot;)">到过场景</button><button type="button" class="chip op" data-insert="endingSeen(&quot;good&quot;)">解锁结局</button></div>
   </div>`).join('');
   const choiceRows=(sc.choices||[]).map((c,i)=>`<div class="choice-card">
     <div class="row"><input type="text" data-role="choiceText" data-idx="${i}" value="${esc(c.text)}" placeholder="选项文字" style="flex:2">
@@ -994,7 +1311,8 @@ function initFlowEvents(){
   };
   const endDragLink=e=>{
     if(!dragLink)return;
-    const targetEl=e.target.closest&&e.target.closest('.node');
+    const hit=document.elementFromPoint(e.clientX,e.clientY);
+    const targetEl=hit&&hit.closest&&hit.closest('.node');
     if(targetEl){finishLink(dragLink.from,dragLink.type,targetEl.dataset.id);}
     else{toast('已取消拖拽连线');}
     dragLink=null;
@@ -1897,6 +2215,61 @@ function stopBGM(){
   try{a.pause&&a.pause();}catch(e){}
   if(a.dataset.src){try{a.removeAttribute&&a.removeAttribute('src');}catch(e){}a.dataset.src='';}
 }
+/* ---------------- 音效（SFX）引擎：WebAudio 程序化合成，无需任何外部资源 ---------------- */
+let sfxEnabled=(()=>{try{return localStorage.getItem('gvn_sfx_on')!=='0';}catch(e){return true;}})();
+let sfxCtx=null,sfxMaster=null;
+function ensureSfx(){
+  if(!sfxEnabled)return null;
+  if(!sfxCtx){
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC)return null;
+      sfxCtx=new AC();
+      sfxMaster=sfxCtx.createGain();sfxMaster.gain.value=0.5;
+      sfxMaster.connect(sfxCtx.destination);
+    }catch(e){sfxCtx=null;return null;}
+  }
+  if(sfxCtx.state==='suspended'){try{sfxCtx.resume();}catch(e){}}
+  return sfxCtx;
+}
+function sfxTone(freq,dur,gain,type,delay,slideTo){
+  const ctx=ensureSfx();if(!ctx)return;
+  try{
+    const t0=ctx.currentTime+(delay||0);
+    const osc=ctx.createOscillator(),g=ctx.createGain();
+    osc.type=type||'sine';
+    osc.frequency.setValueAtTime(Math.max(1,freq),t0);
+    if(slideTo)osc.frequency.exponentialRampToValueAtTime(Math.max(1,slideTo),t0+dur);
+    g.gain.setValueAtTime(gain,t0);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    osc.connect(g);g.connect(sfxMaster);
+    osc.start(t0);osc.stop(t0+dur+0.05);
+  }catch(e){}
+}
+function sfx(name){
+  if(!sfxEnabled)return;
+  switch(name){
+    case 'ui':sfxTone(620,0.05,0.08,'sine');break;
+    case 'type':sfxTone(1180,0.028,0.04,'triangle');break;
+    case 'turn':sfxTone(540,0.06,0.07,'sine',0,780);break;
+    case 'choice':sfxTone(660,0.07,0.10,'sine');sfxTone(990,0.09,0.09,'sine',0.07);break;
+    case 'save':sfxTone(540,0.07,0.10,'sine',0,880);break;
+    case 'load':sfxTone(880,0.07,0.10,'sine',0,540);break;
+    case 'back':sfxTone(720,0.06,0.08,'sine',0,430);sfxTone(430,0.07,0.07,'sine',0.055,240);break;
+    case 'ending-good':[523.25,659.25,783.99,1046.5].forEach((f,i)=>sfxTone(f,0.5,0.10,'triangle',i*0.1));break;
+    case 'ending-other':[392,311.13,233.08,196].forEach((f,i)=>sfxTone(f,0.55,0.09,'sine',i*0.13));break;
+    default:break;
+  }
+}
+function sfxToggle(){
+  sfxEnabled=!sfxEnabled;
+  try{localStorage.setItem('gvn_sfx_on',sfxEnabled?'1':'0');}catch(e){}
+  updateSfxButton();
+  if(sfxEnabled)sfx('ui');else toast('🔇 音效已关闭');
+}
+function updateSfxButton(){
+  $$('.sfx-btn').forEach(b=>{b.textContent=sfxEnabled?'🔊':'🔇';b.title=sfxEnabled?'音效开启（点击关闭）':'音效已关闭（点击开启）';});
+}
 function enterScene(id,choiceFlags){
   const sc=getSceneP(id);if(!sc){toast('缺少场景：'+id);return;}
   clearPending();stopAuto();stopTyping();
@@ -1935,6 +2308,7 @@ function showDialogue(d){
 function nextDialogue(){
   const dlg=currentDialogues();
   if(!dlg.length||P.dialogueIndex>=dlg.length-1)return;
+  if(!P.auto&&!P.skipMode)sfx('turn');
   pushHistory();
   P.dialogueIndex++;
   hideChoices();
@@ -1951,6 +2325,7 @@ function startTyping(speaker,text){
   P.typeTimer=setInterval(()=>{
     P.typeIndex++;
     if(P.typeIndex>=text.length){finishTyping();return;}
+    if(P.speed>=60&&(P.typeIndex%3===0))sfx('type');
     $('#textContent').textContent=text.slice(0,P.typeIndex);
   },P.speed);
 }
@@ -2481,6 +2856,7 @@ function renderChoices(){
   const a=$('#choiceArea');a.innerHTML='';
   if(!P.currentChoices.length){a.classList.add('hidden');return;}
   a.classList.remove('hidden');
+  if(!P.auto&&!P.skipMode)sfx('choice');
   P.currentChoices.forEach(c=>{
     const b=document.createElement('button');b.className='choice-btn';b.textContent=c.text;
     b.onclick=()=>onChoice(c);a.appendChild(b);
@@ -2523,6 +2899,7 @@ function syncChoicesAfterRestore(){
 function back(){
   if(P.ending||P.demoMode)return;
   if(!P.history.length)return;
+  sfx('back');
   stopAllTimers();
   const snap=P.history.pop();
   P.sceneId=snap.sceneId;
@@ -2596,6 +2973,7 @@ function showEnding(ending){
   if(P.ending)return;
   P.ending=ending;
   stopAllTimers();hideChoices();playVoice(null);
+  sfx(ending.kind==='good'||ending.kind==='true'?'ending-good':'ending-other');
   recordEnding(ending);
   const kindMap={good:'好结局',normal:'普通结局',bad:'坏结局',true:'真结局',custom:'自定义结局'};
   $('#endingKind').textContent=kindMap[ending.kind]||'结局';
@@ -2616,6 +2994,7 @@ function renderSaveSlots(){
 function saveToSlot(i){
   const data={sceneId:P.sceneId,sceneName:currentScene()?currentScene().name:'',flags:deepClone(P.flags),backlog:deepClone(P.backlog),readScenes:Array.from(P.readScenes),history:deepClone(P.history),dialogueIndex:P.dialogueIndex,time:new Date().toLocaleString()};
   try{localStorage.setItem(saveKey(i),JSON.stringify(data));toast('已保存到存档 '+i);renderSaveSlots();}catch(e){toast('保存失败：'+e.message);}
+  if(sfxEnabled)sfx('save');
 }
 function loadFromSlot(i){
   const d=loadSlotData(i);if(!d){toast('该存档为空');return;}
@@ -2634,6 +3013,7 @@ function loadFromSlot(i){
   showText(last?last.speaker:'',last?last.text:'',true);
   if(P.currentChoices.length)renderChoices();
   toast('已读取存档 '+i);
+  if(sfxEnabled)sfx('load');
 }
 function openSavePanel(){P.panelMode='save';$('#savePanelTitle').textContent='选择存档位置（点击保存）';$('#savePanel').classList.remove('hidden');renderSaveSlots();}
 function openLoadPanel(){P.panelMode='load';$('#savePanelTitle').textContent='选择存档位置（点击读取）';$('#savePanel').classList.remove('hidden');renderSaveSlots();}
@@ -2681,7 +3061,7 @@ function exportProject(){
 }
 function importProject(file){
   const reader=new FileReader();
-  reader.onload=()=>{try{project=migrateProject(JSON.parse(reader.result));selectedSceneId=project.startScene||(project.scenes[0]&&project.scenes[0].id)||null;renderAll();saveEditor();toast('导入成功');}catch(e){toast('导入失败：'+e.message);}};
+  reader.onload=()=>{try{histSnapshotAuto('导入项目前自动快照');project=migrateProject(JSON.parse(reader.result));selectedSceneId=project.startScene||(project.scenes[0]&&project.scenes[0].id)||null;renderAll();editorResetBaseline();saveEditor();toast('导入成功');}catch(e){toast('导入失败：'+e.message);}};
   reader.readAsText(file);
 }
 /* ---------------- 新手教程 ---------------- */
@@ -2730,10 +3110,22 @@ function initTutorial(){
 }
 
 function initEditorEvents(){
+  bindHistEvents();
+  $('#btnUndo').onclick=undoEditor;
+  $('#btnRedo').onclick=redoEditor;
+  document.addEventListener('keydown',e=>{
+    if($('#editorApp').style.display==='none')return;
+    if(!(e.ctrlKey||e.metaKey))return;
+    const t=e.target;
+    if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
+    const k=(e.key||'').toLowerCase();
+    if(k==='z'&&!e.shiftKey){e.preventDefault();undoEditor();}
+    else if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();redoEditor();}
+  });
   $('#projectTitle').addEventListener('input',e=>{project.title=e.target.value;saveEditor();});
   $('#btnSaveDraft').onclick=saveDraft;
-  $('#btnNew').onclick=()=>{if(confirm('新建项目会覆盖当前浏览器中的草稿（建议先导出 JSON 备份）。继续？')){newProject();renderAll();saveEditor();toast('已新建项目');}};
-  $('#btnSample').onclick=()=>{if(confirm('载入示例项目会覆盖当前浏览器中的草稿（建议先导出 JSON 备份）。继续？')){project=migrateProject(sampleProject());selectedSceneId=project.startScene;renderAll();saveEditor();toast('已载入示例');}};
+  $('#btnNew').onclick=()=>{if(confirm('新建项目会覆盖当前浏览器中的草稿（建议先导出 JSON 备份）。继续？')){histSnapshotAuto('新建项目前自动快照');newProject();renderAll();editorResetBaseline();saveEditor();toast('已新建项目');}};
+  $('#btnSample').onclick=()=>{if(confirm('载入示例项目会覆盖当前浏览器中的草稿（建议先导出 JSON 备份）。继续？')){histSnapshotAuto('载入示例前自动快照');project=migrateProject(sampleProject());selectedSceneId=project.startScene;renderAll();editorResetBaseline();saveEditor();toast('已载入示例');}};
   $('#btnHelp').onclick=()=>$('#helpModal').classList.remove('hidden');
   $('#btnHelpClose').onclick=()=>$('#helpModal').classList.add('hidden');
   $('#btnPlay').onclick=()=>openPlayer(project);
@@ -2771,7 +3163,7 @@ function initEditorEvents(){
   $('#aiImgTarget').addEventListener('change',renderAiCharSels);
   $('#aiCharSel').addEventListener('change',renderAiCharSels);
   ['aiImageBaseUrl','aiImageKey','aiImageModel','aiImagePath','aiImageFormat','aiImageSize','aiVideoBaseUrl','aiVideoKey','aiVideoModel','aiVideoPath','aiVideoSize','aiTextBaseUrl','aiTextKey','aiTextModel','aiTextPath'].forEach(id=>{const el=$('#'+id);if(el){el.addEventListener('input',saveAiSettings);el.addEventListener('change',saveAiSettings);}});
-  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('#uiModal').classList.contains('hidden')){closeUIModal();}else if(!$('#aiModal').classList.contains('hidden')){closeAiModal();}else if(!$('#importDlgModal').classList.contains('hidden')){$('#importDlgModal').classList.add('hidden');}else if(!$('#outlineModal').classList.contains('hidden')){closeOutlineModal();}else if(!$('#flagsModal').classList.contains('hidden')){applyFlagsModal();$('#flagsModal').classList.add('hidden');}else if(!$('#charModal').classList.contains('hidden')){$('#charModal').classList.add('hidden');saveEditor();}});
+  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('#histModal').classList.contains('hidden')){closeHistModal();}else if(!$('#uiModal').classList.contains('hidden')){closeUIModal();}else if(!$('#aiModal').classList.contains('hidden')){closeAiModal();}else if(!$('#importDlgModal').classList.contains('hidden')){$('#importDlgModal').classList.add('hidden');}else if(!$('#outlineModal').classList.contains('hidden')){closeOutlineModal();}else if(!$('#flagsModal').classList.contains('hidden')){applyFlagsModal();$('#flagsModal').classList.add('hidden');}else if(!$('#charModal').classList.contains('hidden')){$('#charModal').classList.add('hidden');saveEditor();}});
   $('#btnFlags').onclick=()=>{renderFlagsModal();$('#flagsModal').classList.remove('hidden');};
   $('#btnAddFlag').onclick=()=>{const row=document.createElement('div');row.className='flag-list-row';row.innerHTML=`<input type="text" data-fidx="-1" data-frole="name" placeholder="新数值名"><input type="number" step="any" data-fidx="-1" data-frole="val" value="0"><button class="mini danger" data-frole="del">✕</button>`;$('#flagsList').appendChild(row);};
   $('#flagsList').addEventListener('click',e=>{const btn=e.target.closest('button[data-frole=del]');if(btn)btn.closest('.flag-list-row').remove();});
@@ -2790,6 +3182,13 @@ function initEditorEvents(){
   insp.addEventListener('change',e=>{if(e.target.dataset&&(e.target.dataset.field||e.target.dataset.role))handleInspectorChange(e);});
 }
 function initPlayerEvents(){
+  $$('.sfx-btn').forEach(b=>{b.onclick=sfxToggle;});
+  updateSfxButton();
+  document.addEventListener('click',e=>{
+    if($('#playerApp').classList.contains('hidden')||!sfxEnabled)return;
+    if(e.target.closest('.sfx-btn')||e.target.closest('#choiceArea')||e.target.closest('#backlogPanel')||e.target.closest('#savePanel'))return;
+    if(e.target.closest('button,select,input'))sfx('ui');
+  },true);
   $('#btnBackEditor').onclick=()=>{if(confirm('返回编辑器？当前进度未存档会丢失。'))closePlayer();};
   $('#btnTitleEditor').onclick=()=>closePlayer();
   $('#btnEndingEditor').onclick=()=>closePlayer();
@@ -2838,6 +3237,7 @@ function initPlayerEvents(){
 function boot(){
   loadEditor();
   renderAll();
+  editorResetBaseline();
   initEditorEvents();
   initPlayerEvents();
   initTutorial();
