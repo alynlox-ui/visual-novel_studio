@@ -1,5 +1,5 @@
 {
-  "name": "galgame-studio",
+  "name": "visual-novel-studio",
   "version": "1.1.0",
   "description": "可视化 Galgame 制作工坊 - 无需编程，支持分支、结局判定、存档读档、演示模式",
   "main": "server.js",

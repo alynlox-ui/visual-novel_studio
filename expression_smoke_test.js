@@ -1,0 +1,13 @@
+// expression_smoke_test.js — 角色表情槽冒烟测试
+const fs=require('fs');const {installDomStubs}=require('./dom_stub.js');installDomStubs();const html=fs.readFileSync('index.html','utf8');const m=html.match(/<script>([\s\S]*?)<\/script>/);if(!m)process.exit(1);
+const TEST=`
+;(function(){const o=[],ck=(n,c,x)=>o.push((c?'  ✓ ':'  ✗ FAIL: ')+n+(x?' '+JSON.stringify(x):''));try{
+ const oldQ=document.querySelector,els={};const mk=(v='')=>({value:v,textContent:'',innerHTML:'',dataset:{},style:{setProperty(){}},classList:{add(){},remove(){},contains(){return false},toggle(){}},addEventListener(){},appendChild(){},querySelector(){return null},querySelectorAll(){return []},getBoundingClientRect(){return {left:0,top:0,width:100,height:100,right:100,bottom:100}}});
+ ck('表情数据迁移字段存在',migrateProject({scenes:[{id:'s',dialogues:[{text:'x'}]}],characters:[{id:'c',name:'小夜'}]}).scenes[0].dialogues[0].expressionId==='');
+ const p=migrateProject({id:'p',title:'表情测试',flags:{},scenes:[{id:'s',name:'场景',characters:[{id:'sc',charId:'c'}],dialogues:[{id:'d',speaker:'小夜',text:'你好',charId:'sc',actionId:'',expressionId:'e2'}]}],characters:[{id:'c',name:'小夜',baseImage:'base.png',expressions:[{id:'e1',name:'微笑',image:'smile.png'},{id:'e2',name:'悲伤',image:'sad.png'}],actions:[{id:'a',name:'待机',image:'act.png',anim:'idle'}]}]});project=p;selectedSceneId='s';P.project=project;P.sceneId='s';
+ const sc=selectedScene();ck('表情槽可渲染到人物编辑器',charEditHTML(project.characters[0]).includes('表情槽')&&charEditHTML(project.characters[0]).includes('expName0'));
+ const opts=dialogueExpressionOptions(sc,sc.dialogues[0],0);ck('对话编辑提供表情选项',opts.includes('dialogueExpression')&&opts.includes('微笑')&&opts.includes('悲伤')&&opts.includes('e2'));
+ applyDialogueCast(sc.dialogues[0]);ck('台词触发写入活动表情',P.activeCharId==='sc'&&P.activeExpressionId==='e2');const vis=getCharVisual(Object.assign({},sc.characters[0],{expressionId:P.activeExpressionId}));ck('选择表情后播放器使用表情图',vis.image==='sad.png');P.activeExpressionId='e1';ck('切换表情后播放器即时读取新图',getCharVisual(Object.assign({},sc.characters[0],{expressionId:P.activeExpressionId})).image==='smile.png');
+ els.dialogueExpression=mk('e2');els.dialogueExpression.dataset={role:'dialogueExpression',idx:'0'};document.querySelector=s=>els[s.replace('#','')]||mk();handleInspectorChange({target:els.dialogueExpression});ck('表情选择写回对话模型',sc.dialogues[0].expressionId==='e2');document.querySelector=oldQ;
+}catch(e){o.push('  ✗ FATAL '+e.stack)}console.log(o.join('\\n'));const f=o.filter(x=>x.includes('✗')).length;console.log('========== 表情槽冒烟：'+(o.length-f)+' 通过 / '+f+' 失败 ==========');process.exit(f?1:0)})();`;
+try{eval(m[1]+'\n'+TEST)}catch(e){console.error('EVAL/BOOT ERROR',e.stack);process.exit(1)}

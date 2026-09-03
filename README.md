@@ -4,8 +4,8 @@
 
 把剧情变成一张看得见、拖得动的流程图：创建场景、连接分支、设置选项、埋下数值（Flag），再为每个角色设计专属路线与多结局。内置播放器支持快进、后退、历史记录、自动播放与本地存档/读档；特有的「演示模式」让你直接在游戏画面中拖动角色立绘、替换背景，并自由调整文本框、角色名牌、选项区等 UI 的样式与位置。项目可导出为 JSON 文件，便于备份、分享与二次编辑。
 
-🌐 **在线使用**：https://galgame-studio.onrender.com  
-📦 **源码仓库**：https://github.com/alynlox-ui/galgame-studio
+🌐 **在线使用**：https://visual-novel-studio.onrender.com  
+📦 **源码仓库**：https://github.com/alynlox-ui/visual-novel_studio
 
 **核心特性：**
 - 🗺 可视化节点编辑：场景 / 分支 / 结局一目了然，支持拖拽与自动布局

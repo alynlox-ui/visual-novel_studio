@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: galgame-studio
+    name: visual-novel-studio
     env: node
     plan: free
     buildCommand: "npm install"
