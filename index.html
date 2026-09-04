@@ -117,7 +117,7 @@ header .logo{font-weight:700;font-size:16px;margin-right:6px;white-space:nowrap;
 #speakerName{display:inline-block;background:#FB7299;color:#FFFFFF;padding:4px 16px;border-radius:999px;font-size:14px;font-weight:700;margin-bottom:10px}
 #textContent{font-size:18px;line-height:1.75;min-height:76px;color:#18191C;letter-spacing:.3px;white-space:pre-wrap}
 #clickHint{position:absolute;right:22px;bottom:12px;font-size:11px;color:#9499A0;animation:blink 1.6s infinite;z-index:9}
-@keyframes blink{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes blink{0%,100%{opacity:.35}50%{opacity:1}}@keyframes char-fade{from{opacity:0}to{opacity:1}}@keyframes char-slide{from{opacity:0;translate:-30px 0}to{opacity:1;translate:0 0}}@keyframes char-pop{from{opacity:0;scale:.9}to{opacity:1;scale:1}}
 #titleScreen,#endingScreen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#F4F5F7;z-index:30}
 #titleScreen h1{font-size:40px;font-weight:900;letter-spacing:2px;color:#18191C}
 #titleScreen .sub{color:#61666D}
@@ -809,7 +809,7 @@ function applyFlagOp(flags,op,key,value){
   flags[key]=Math.round(r*1000)/1000;
 }
 function applySetFlags(list,flags){(list||[]).forEach(r=>{if(r&&r.flag)applyFlagOp(flags,r.op,r.flag,r.value);});}
-function defaultUILayout(){return {textbox:{show:true,x:50,y:94,w:82,opacity:1,bg:'#FFFFFF',border:'#E3E5E7',radius:12,fontColor:'#18191C',fontSize:18,lineHeight:1.75},speaker:{show:true,offsetX:0,offsetY:0,scale:1,bg:'#FB7299',color:'#FFFFFF',radius:999,fontSize:14},choices:{show:true,x:50,y:36,w:60,opacity:1,bg:'#FFFFFF',border:'#FB7299',color:'#FB7299',radius:12,fontSize:16},hint:{show:true}};}
+function defaultUILayout(){return {global:{fontFamily:'system-ui',transitionMs:220,charTransition:'fade'},textbox:{show:true,x:50,y:94,w:82,opacity:1,bg:'#FFFFFF',border:'#E3E5E7',radius:12,fontColor:'#18191C',fontSize:18,lineHeight:1.75,padding:22},speaker:{show:true,offsetX:0,offsetY:0,scale:1,bg:'#FB7299',color:'#FFFFFF',radius:999,fontSize:14},choices:{show:true,x:50,y:36,w:60,opacity:1,bg:'#FFFFFF',border:'#FB7299',color:'#FB7299',radius:12,fontSize:16,gap:11},hint:{show:true}};}
 function getFlagArray(sc,owner){return owner===''?(sc.setFlags||(sc.setFlags=[])):(sc.choices[+owner].setFlags||(sc.choices[+owner].setFlags=[]));}
 function migrateProject(p){
   p=p||{};p.scenes=p.scenes||[];p.flags=p.flags||{};p.locales=p.locales||{};p.assets=p.assets||[];p.startScene=p.startScene||(p.scenes[0]&&p.scenes[0].id)||'';
@@ -1764,6 +1764,12 @@ function uiSliderNumberHTML(id,valId,label,val,min,max,step){
 function uiSettingsHTML(){
   const u=project.ui||defaultUILayout();
   return `
+  <details class="insp-sec" open><summary>✨ 全局外观与动画</summary>
+    <div class="insp-row"><label>字体</label><select id="uiFontFamily"><option value="system-ui" ${u.global.fontFamily==='system-ui'?'selected':''}>系统默认</option><option value="'Microsoft YaHei',sans-serif" ${u.global.fontFamily.includes('YaHei')?'selected':''}>微软雅黑</option><option value="serif" ${u.global.fontFamily==='serif'?'selected':''}>衬线文学体</option><option value="monospace" ${u.global.fontFamily==='monospace'?'selected':''}>等宽字体</option></select></div>
+    ${uiSliderNumberHTML('uiTransition','uiTransitionVal','界面过渡时长(ms)',u.global.transitionMs,0,1000,20)}
+    <div class="insp-row"><label>角色切换效果</label><select id="uiCharTransition"><option value="none" ${u.global.charTransition==='none'?'selected':''}>无</option><option value="fade" ${u.global.charTransition==='fade'?'selected':''}>淡入</option><option value="slide" ${u.global.charTransition==='slide'?'selected':''}>侧滑淡入</option><option value="pop" ${u.global.charTransition==='pop'?'selected':''}>缩放弹入</option></select></div>
+    <button type="button" class="mini danger" data-uireset="global">重置本组件</button>
+  </details>
   <details class="insp-sec" open><summary>💬 文本框</summary>
     ${uiCheckboxHTML('uiTbShow','显示文本框',u.textbox.show)}
     ${uiSliderNumberHTML('uiTbX','uiTbXVal','水平位置 X',u.textbox.x,0,100,0.5)}
@@ -1776,6 +1782,7 @@ function uiSettingsHTML(){
     ${uiColorHTML('uiTbFontColor','文字颜色',u.textbox.fontColor)}
     ${uiSliderNumberHTML('uiTbFontSize','uiTbFontSizeVal','字号',u.textbox.fontSize,10,36,1)}
     ${uiSliderNumberHTML('uiTbLineHeight','uiTbLineHeightVal','行高',u.textbox.lineHeight,1.2,2.5,0.05)}
+    ${uiSliderNumberHTML('uiTbPadding','uiTbPaddingVal','内边距(px)',u.textbox.padding,6,48,1)}
     <button type="button" class="mini danger" data-uireset="textbox">重置本组件</button>
   </details>
   <details class="insp-sec"><summary>🏷 角色名牌</summary>
@@ -1800,6 +1807,7 @@ function uiSettingsHTML(){
     ${uiColorHTML('uiChColor','按钮文字色',u.choices.color)}
     ${uiSliderNumberHTML('uiChRadius','uiChRadiusVal','按钮圆角',u.choices.radius,0,30,1)}
     ${uiSliderNumberHTML('uiChFontSize','uiChFontSizeVal','按钮字号',u.choices.fontSize,10,30,1)}
+    ${uiSliderNumberHTML('uiChGap','uiChGapVal','选项间距(px)',u.choices.gap,0,36,1)}
     <button type="button" class="mini danger" data-uireset="choices">重置本组件</button>
   </details>
   <details class="insp-sec"><summary>👆 点击提示</summary>
@@ -1809,11 +1817,12 @@ function uiSettingsHTML(){
 }
 function renderUIPreview(){
   const u=project.ui;if(!u)return;
-  const tb=$('#uiPreviewTextBox'),sp=$('#uiPreviewSpeaker'),ca=$('#uiPreviewChoices'),hint=$('#uiPreviewHint'),tc=$('#uiPreviewText');
+  const tb=$('#uiPreviewTextBox'),sp=$('#uiPreviewSpeaker'),ca=$('#uiPreviewChoices'),hint=$('#uiPreviewHint'),tc=$('#uiPreviewText'),pv=$('#uiPreviewBox');
+  if(pv){pv.style.fontFamily=u.global.fontFamily;pv.style.setProperty('--ui-transition',u.global.transitionMs+'ms');}
   if(tb){
     tb.style.left=u.textbox.x+'%';tb.style.top=u.textbox.y+'%';tb.style.bottom='auto';tb.style.transform='translate(-50%,-100%)';
     tb.style.width='min('+u.textbox.w+'%, 94%)';tb.style.background=u.textbox.bg;tb.style.borderColor=u.textbox.border;
-    tb.style.borderRadius=u.textbox.radius+'px';tb.style.opacity=u.textbox.opacity;tb.style.display=u.textbox.show?'block':'none';
+    tb.style.borderRadius=u.textbox.radius+'px';tb.style.opacity=u.textbox.opacity;tb.style.padding=u.textbox.padding+'px';tb.style.transition='all '+u.global.transitionMs+'ms ease';tb.style.display=u.textbox.show?'block':'none';
   }
   if(sp){
     sp.style.display=(u.speaker.show&&u.textbox.show)?'inline-block':'none';sp.style.background=u.speaker.bg;sp.style.color=u.speaker.color;
@@ -1823,7 +1832,7 @@ function renderUIPreview(){
   if(tc){tc.style.color=u.textbox.fontColor;tc.style.fontSize=u.textbox.fontSize+'px';tc.style.lineHeight=u.textbox.lineHeight;}
   if(ca){
     ca.style.left=u.choices.x+'%';ca.style.top=u.choices.y+'%';ca.style.transform='translateX(-50%)';ca.style.width='min('+u.choices.w+'%, 94%)';
-    ca.style.opacity=u.choices.opacity;ca.style.display=u.choices.show?'flex':'none';
+    ca.style.opacity=u.choices.opacity;ca.style.gap=u.choices.gap+'px';ca.style.transition='all '+u.global.transitionMs+'ms ease';ca.style.display=u.choices.show?'flex':'none';
     ca.style.setProperty('--ch-bg',u.choices.bg);ca.style.setProperty('--ch-border',u.choices.border);ca.style.setProperty('--ch-color',u.choices.color);
     ca.style.setProperty('--ch-radius',u.choices.radius+'px');ca.style.setProperty('--ch-font',u.choices.fontSize+'px');
   }
@@ -1844,8 +1853,15 @@ function bindEditorUICheck(id,obj,key){
   const el=$(id);if(!el)return;
   el.onchange=()=>{obj[key]=el.checked;renderUIPreview();saveEditor();};
 }
+function bindEditorUISelect(id,obj,key){
+  const el=$(id);if(!el)return;
+  el.onchange=()=>{obj[key]=el.value;renderUIPreview();saveEditor();};
+}
 function bindUISettingsControls(){
   const u=project.ui||defaultUILayout();
+  bindEditorUISelect('uiFontFamily',u.global,'fontFamily');
+  bindEditorUIRange('uiTransition','uiTransitionVal',u.global,'transitionMs');
+  bindEditorUISelect('uiCharTransition',u.global,'charTransition');
   bindEditorUIRange('uiTbX','uiTbXVal',u.textbox,'x');
   bindEditorUIRange('uiTbY','uiTbYVal',u.textbox,'y');
   bindEditorUIRange('uiTbW','uiTbWVal',u.textbox,'w');
@@ -1856,6 +1872,7 @@ function bindUISettingsControls(){
   bindEditorUIColor('uiTbFontColor',u.textbox,'fontColor');
   bindEditorUIRange('uiTbFontSize','uiTbFontSizeVal',u.textbox,'fontSize');
   bindEditorUIRange('uiTbLineHeight','uiTbLineHeightVal',u.textbox,'lineHeight');
+  bindEditorUIRange('uiTbPadding','uiTbPaddingVal',u.textbox,'padding');
   bindEditorUICheck('uiTbShow',u.textbox,'show');
   bindEditorUIRange('uiSpX','uiSpXVal',u.speaker,'offsetX');
   bindEditorUIRange('uiSpY','uiSpYVal',u.speaker,'offsetY');
@@ -1874,6 +1891,7 @@ function bindUISettingsControls(){
   bindEditorUIColor('uiChColor',u.choices,'color');
   bindEditorUIRange('uiChRadius','uiChRadiusVal',u.choices,'radius');
   bindEditorUIRange('uiChFontSize','uiChFontSizeVal',u.choices,'fontSize');
+  bindEditorUIRange('uiChGap','uiChGapVal',u.choices,'gap');
   bindEditorUICheck('uiChShow',u.choices,'show');
   bindEditorUICheck('uiHintShow',u.hint,'show');
   $$('#uiSettingsBody [data-uireset]').forEach(btn=>{btn.onclick=()=>resetUIComponent(btn.dataset.uireset);});
@@ -1884,7 +1902,8 @@ function renderUISettings(){
   bindUISettingsControls();
 }
 function applyUIPreset(name){
-  const preset=(UI_PRESETS[name]||UI_PRESETS.default)();
+  const raw=(UI_PRESETS[name]||UI_PRESETS.default)(),def=defaultUILayout(),preset={};
+  Object.keys(def).forEach(k=>{preset[k]=Object.assign({},def[k],raw[k]||{});});
   project.ui=deepClone(preset);
   renderUISettings();renderUIPreview();saveEditor();
   toast('UI 预设已应用');
@@ -2512,6 +2531,7 @@ function hexToRgba(hex,a){
 }
 function applyUILayout(){
   const ui=P.project&&P.project.ui;if(!ui)return;
+  const root=$('#gameScreen');if(root){root.style.fontFamily=ui.global.fontFamily;root.style.setProperty('--ui-transition',ui.global.transitionMs+'ms');}
   const tb=$('#textbox');
   tb.style.left=ui.textbox.x+'%';tb.style.top=ui.textbox.y+'%';tb.style.bottom='auto';
   tb.style.transform='translate(-50%,-100%)';
@@ -2519,6 +2539,7 @@ function applyUILayout(){
   tb.style.background=hexToRgba(ui.textbox.bg,ui.textbox.opacity);
   tb.style.borderColor=ui.textbox.border;
   tb.style.borderRadius=ui.textbox.radius+'px';
+  tb.style.padding=ui.textbox.padding+'px';tb.style.transition='all '+ui.global.transitionMs+'ms ease';
   tb.style.display=ui.textbox.show?'block':'none';
   const tc=$('#textContent');
   tc.style.color=ui.textbox.fontColor;tc.style.fontSize=ui.textbox.fontSize+'px';tc.style.lineHeight=ui.textbox.lineHeight;
@@ -2531,7 +2552,7 @@ function applyUILayout(){
   const ca=$('#choiceArea');
   ca.style.left=ui.choices.x+'%';ca.style.top=ui.choices.y+'%';ca.style.transform='translate(-50%,-50%)';
   ca.style.width='min('+ui.choices.w+'%, 94vw)';
-  ca.style.opacity=ui.choices.opacity;
+  ca.style.opacity=ui.choices.opacity;ca.style.gap=ui.choices.gap+'px';ca.style.transition='all '+ui.global.transitionMs+'ms ease';
   ca.style.display=ui.choices.show?'flex':'none';
   ca.style.setProperty('--ch-bg',ui.choices.bg);
   ca.style.setProperty('--ch-border',ui.choices.border);
@@ -2663,6 +2684,8 @@ function renderCharacters(){
     }
     const active=ch.id===P.activeCharId;
     const div=document.createElement('div');div.className='char-sprite';
+    const ct=(P.project.ui&&P.project.ui.global&&P.project.ui.global.charTransition)||'none',tm=(P.project.ui&&P.project.ui.global&&P.project.ui.global.transitionMs)||0;
+    if(ct!=='none'&&tm>0)div.style.animation='char-'+ct+' '+tm+'ms ease both';
     if(active)div.classList.add('speaking');
     if(vis.live2d)div.classList.add('live2d');
     if(P.demoMode&&P.demoSelection&&P.demoSelection.type==='char'&&P.demoSelection.index===i)div.classList.add('selected');
@@ -3325,8 +3348,8 @@ function bindBatchEvents(){
 /* ---------------- 文件导入导出 ---------------- */
 function playableHtml(){
   const data=JSON.stringify(migrateProject(deepClone(project))).replace(/<\/script/gi,'<\\/script');
-  return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>'+esc(project.title||'Galgame')+'</title><style>'+String.raw`*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:system-ui,'Microsoft YaHei',sans-serif;background:#111;color:#fff}#app{position:relative;width:100%;height:100%;background:#222;background-size:cover;background-position:center}#cast{position:absolute;inset:7% 0 0;z-index:1;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}#cast img{max-height:84vh;max-width:76vw;object-fit:contain;filter:drop-shadow(0 10px 22px rgba(0,0,0,.42))}#shade{position:absolute;inset:0;background:linear-gradient(transparent 45%,rgba(0,0,0,.62))}#top{position:absolute;top:12px;left:12px;z-index:4;display:flex;gap:6px;flex-wrap:wrap}button{border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:7px 12px;background:rgba(20,20,30,.7);color:#fff;cursor:pointer}button:hover{background:#fb7299}.panel{position:absolute;left:50%;bottom:5%;transform:translateX(-50%);width:min(920px,92vw);z-index:3}.speaker{display:inline-block;background:#fb7299;border-radius:999px;padding:5px 14px;margin-bottom:6px}.text{background:rgba(10,10,18,.78);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:18px 20px;min-height:110px;font-size:clamp(16px,2.2vw,22px);line-height:1.75}.choices{position:absolute;left:50%;top:35%;transform:translate(-50%,-50%);width:min(640px,88vw);display:flex;flex-direction:column;gap:10px;z-index:5}.choices button{font-size:17px;padding:13px;background:rgba(10,10,18,.82)}#title,#end{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#181421;text-align:center}#title h1,#end h1{font-size:clamp(28px,6vw,52px);margin:0;color:#ff8db0}.muted{color:#bbb;font-size:14px}.hidden{display:none!important}`+'</style></head><body><main id="app"><div id="shade"></div><div id="cast"></div><div id="top"><button id="back">返回标题</button><button id="mute">🔊 音效</button><select id="lang" title="语言"></select></div><div id="choices" class="choices hidden"></div><section class="panel"><div id="speaker" class="speaker hidden"></div><div id="text" class="text"></div></section><section id="title"><h1 id="titleName"></h1><div class="muted">可运行导出版本</div><button id="start">开始游戏</button></section><section id="end" class="hidden"><div class="muted" id="endKind"></div><h1 id="endTitle"></h1><button id="again">重新开始</button><button id="endBack">回到标题</button></section></main><script>const PROJECT='+data+`;
-(()=>{let sc=null,di=0,flags={},muted=false,ctx=null,lang='';const $=s=>document.querySelector(s);const tr=s=>(PROJECT.locales&&PROJECT.locales[lang]&&PROJECT.locales[lang].strings&&PROJECT.locales[lang].strings[s])||s;const scene=id=>PROJECT.scenes.find(x=>x.id===id);const dlg=()=>{const d=sc&&sc.dialogues&&sc.dialogues.length?sc.dialogues:[{speaker:sc?.speaker||'',text:sc?.text||''}];return d.filter(x=>x.text||x.speaker);};function tone(f=600){if(muted)return;try{ctx=ctx||new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=f;g.gain.value=.06;g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.12);o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.13)}catch(e){}}function cond(x){if(!x)return true;try{return Function('f','with(f){return !!('+x+')}')(flags)}catch(e){return false}}function setFlags(a){(a||[]).forEach(r=>{const v=Number(r.value)||0,old=Number(flags[r.flag]||0);flags[r.flag]=r.op==='+'?old+v:r.op==='-'?old-v:r.op==='*'?old*v:r.op==='/'?(v?old/v:old):v})}function bg(){const a=$('#app');a.style.backgroundColor=sc.bg||'#222';a.style.backgroundImage=sc.bgImage?'url("'+String(sc.bgImage).replace(/"/g,'\\"')+'")':'none'}function cast(d){const box=$('#cast');box.innerHTML='';const ch=d&&d.charId?sc.characters.find(x=>x.id===d.charId):null;const lib=ch&&ch.charId?PROJECT.characters.find(x=>x.id===ch.charId):null;if(!ch||!lib)return;const ex=lib.expressions&&lib.expressions.find(x=>x.id===d.expressionId);const act=lib.actions&&lib.actions.find(x=>x.id===d.actionId);const src=ex&&ex.image?ex.image:(act&&act.image?act.image:lib.baseImage);if(src){const im=document.createElement('img');im.src=src;im.alt=tr(lib.name||'');box.appendChild(im)}}function show(){if(!sc)return;bg();$('#choices').classList.add('hidden');const ds=dlg();if(di<ds.length){const d=ds[di];cast(d);$('#speaker').textContent=tr(d.speaker||'');$('#speaker').classList.toggle('hidden',!d.speaker);$('#text').textContent=tr(String(d.text||'')).replace(/\\{([^}]+)\\}/g,(m,k)=>k.trim() in flags?flags[k.trim()]:m);return}if(sc.ending){$('#endKind').textContent=sc.ending.kind||'结局';$('#endTitle').textContent=tr(sc.ending.title||'END');$('#end').classList.remove('hidden');tone(880);return}const choices=(sc.choices||[]).filter(c=>cond(c.cond));if(choices.length){const box=$('#choices');box.innerHTML='';choices.forEach(c=>{const b=document.createElement('button');b.textContent=tr(c.text);b.onclick=()=>{tone(760);setFlags(c.setFlags);go(c.target)};box.appendChild(b)});box.classList.remove('hidden');return}let t=(sc.autoBranches||[]).find(x=>cond(x.cond))?.target||sc.next;if(t)go(t);else $('#text').textContent='剧情到此为止。'}function go(id){sc=scene(id);di=0;if(!sc){$('#text').textContent='缺少场景：'+id;return}setFlags(sc.setFlags);show()}function start(){flags=JSON.parse(JSON.stringify(PROJECT.flags||{}));$('#title').classList.add('hidden');$('#end').classList.add('hidden');go(PROJECT.startScene)}$('#titleName').textContent=tr(PROJECT.title||'未命名作品');const ls=$('#lang');ls.innerHTML='<option value="">原文</option>'+Object.entries(PROJECT.locales||{}).map(([k,v])=>'<option value="'+k+'">'+(v.name||k)+'</option>').join('');ls.onchange=()=>{lang=ls.value;$('#titleName').textContent=tr(PROJECT.title||'未命名作品');if(sc)show()};$('#start').onclick=start;$('#again').onclick=start;$('#endBack').onclick=()=>{$('#end').classList.add('hidden');$('#title').classList.remove('hidden')};$('#back').onclick=()=>{location.reload()};$('#mute').onclick=()=>{muted=!muted;$('#mute').textContent=muted?'🔇 音效':'🔊 音效'};$('#app').onclick=e=>{if(e.target.closest('button')||e.target.closest('#choices'))return;if(sc&&di<dlg().length){di++;tone(620);show()}}})();${'</'}script></body></html>`;
+  return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>'+esc(project.title||'Galgame')+'</title><style>'+String.raw`*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:system-ui,'Microsoft YaHei',sans-serif;background:#111;color:#fff}#app{position:relative;width:100%;height:100%;background:#222;background-size:cover;background-position:center}#cast{position:absolute;inset:7% 0 0;z-index:1;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}#cast img{max-height:84vh;max-width:76vw;object-fit:contain;filter:drop-shadow(0 10px 22px rgba(0,0,0,.42))}#shade{position:absolute;inset:0;background:linear-gradient(transparent 45%,rgba(0,0,0,.62))}#top{position:absolute;top:12px;left:12px;z-index:4;display:flex;gap:6px;flex-wrap:wrap}button{border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:7px 12px;background:rgba(20,20,30,.7);color:#fff;cursor:pointer}button:hover{background:#fb7299}.panel{position:absolute;left:50%;bottom:5%;transform:translateX(-50%);width:min(920px,92vw);z-index:3}.speaker{display:inline-block;background:#fb7299;border-radius:999px;padding:5px 14px;margin-bottom:6px}.text{background:rgba(10,10,18,.78);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:18px 20px;min-height:110px;font-size:clamp(16px,2.2vw,22px);line-height:1.75}.choices{position:absolute;left:50%;top:35%;transform:translate(-50%,-50%);width:min(640px,88vw);display:flex;flex-direction:column;gap:10px;z-index:5}.choices button{font-size:17px;padding:13px;background:rgba(10,10,18,.82)}#title,#end{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#181421;text-align:center}#title h1,#end h1{font-size:clamp(28px,6vw,52px);margin:0;color:#ff8db0}.muted{color:#bbb;font-size:14px}.hidden{display:none!important}@keyframes cast-fade{from{opacity:0}to{opacity:1}}@keyframes cast-slide{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}@keyframes cast-pop{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}`+'</style></head><body><main id="app"><div id="shade"></div><div id="cast"></div><div id="top"><button id="back">返回标题</button><button id="mute">🔊 音效</button><select id="lang" title="语言"></select></div><div id="choices" class="choices hidden"></div><section class="panel"><div id="speaker" class="speaker hidden"></div><div id="text" class="text"></div></section><section id="title"><h1 id="titleName"></h1><div class="muted">可运行导出版本</div><button id="start">开始游戏</button></section><section id="end" class="hidden"><div class="muted" id="endKind"></div><h1 id="endTitle"></h1><button id="again">重新开始</button><button id="endBack">回到标题</button></section></main><script>const PROJECT='+data+`;
+(()=>{let sc=null,di=0,flags={},muted=false,ctx=null,lang='';const $=s=>document.querySelector(s);const tr=s=>(PROJECT.locales&&PROJECT.locales[lang]&&PROJECT.locales[lang].strings&&PROJECT.locales[lang].strings[s])||s;const scene=id=>PROJECT.scenes.find(x=>x.id===id);const dlg=()=>{const d=sc&&sc.dialogues&&sc.dialogues.length?sc.dialogues:[{speaker:sc?.speaker||'',text:sc?.text||''}];return d.filter(x=>x.text||x.speaker);};function tone(f=600){if(muted)return;try{ctx=ctx||new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=f;g.gain.value=.06;g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.12);o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.13)}catch(e){}}function cond(x){if(!x)return true;try{return Function('f','with(f){return !!('+x+')}')(flags)}catch(e){return false}}function setFlags(a){(a||[]).forEach(r=>{const v=Number(r.value)||0,old=Number(flags[r.flag]||0);flags[r.flag]=r.op==='+'?old+v:r.op==='-'?old-v:r.op==='*'?old*v:r.op==='/'?(v?old/v:old):v})}function bg(){const a=$('#app');a.style.backgroundColor=sc.bg||'#222';a.style.backgroundImage=sc.bgImage?'url("'+String(sc.bgImage).replace(/"/g,'\\"')+'")':'none'}function applyUI(){const u=PROJECT.ui||{},g=u.global||{},t=u.textbox||{},c=u.choices||{};const app=$('#app'),panel=document.querySelector('.panel'),text=$('#text'),box=$('#choices');app.style.fontFamily=g.fontFamily||'system-ui';if(panel){panel.style.padding=(t.padding||22)+'px';panel.style.transition='all '+(g.transitionMs||0)+'ms ease'}if(text)text.style.lineHeight=t.lineHeight||1.75;if(box){box.style.gap=(c.gap||11)+'px';box.style.transition='all '+(g.transitionMs||0)+'ms ease'}}function cast(d){const box=$('#cast');box.innerHTML='';const ch=d&&d.charId?sc.characters.find(x=>x.id===d.charId):null;const lib=ch&&ch.charId?PROJECT.characters.find(x=>x.id===ch.charId):null;if(!ch||!lib)return;const ex=lib.expressions&&lib.expressions.find(x=>x.id===d.expressionId);const act=lib.actions&&lib.actions.find(x=>x.id===d.actionId);const src=ex&&ex.image?ex.image:(act&&act.image?act.image:lib.baseImage);if(src){const im=document.createElement('img');im.src=src;im.alt=tr(lib.name||'');const g=PROJECT.ui&&PROJECT.ui.global||{},ct=g.charTransition||'none',tm=g.transitionMs||0;if(ct!=='none'&&tm>0)im.style.animation='cast-'+ct+' '+tm+'ms ease both';box.appendChild(im)}}function show(){if(!sc)return;bg();$('#choices').classList.add('hidden');const ds=dlg();if(di<ds.length){const d=ds[di];cast(d);$('#speaker').textContent=tr(d.speaker||'');$('#speaker').classList.toggle('hidden',!d.speaker);$('#text').textContent=tr(String(d.text||'')).replace(/\\{([^}]+)\\}/g,(m,k)=>k.trim() in flags?flags[k.trim()]:m);return}if(sc.ending){$('#endKind').textContent=sc.ending.kind||'结局';$('#endTitle').textContent=tr(sc.ending.title||'END');$('#end').classList.remove('hidden');tone(880);return}const choices=(sc.choices||[]).filter(c=>cond(c.cond));if(choices.length){const box=$('#choices');box.innerHTML='';choices.forEach(c=>{const b=document.createElement('button');b.textContent=tr(c.text);b.onclick=()=>{tone(760);setFlags(c.setFlags);go(c.target)};box.appendChild(b)});box.classList.remove('hidden');return}let t=(sc.autoBranches||[]).find(x=>cond(x.cond))?.target||sc.next;if(t)go(t);else $('#text').textContent='剧情到此为止。'}function go(id){sc=scene(id);di=0;if(!sc){$('#text').textContent='缺少场景：'+id;return}setFlags(sc.setFlags);show()}function start(){flags=JSON.parse(JSON.stringify(PROJECT.flags||{}));applyUI();$('#title').classList.add('hidden');$('#end').classList.add('hidden');go(PROJECT.startScene)}$('#titleName').textContent=tr(PROJECT.title||'未命名作品');const ls=$('#lang');ls.innerHTML='<option value="">原文</option>'+Object.entries(PROJECT.locales||{}).map(([k,v])=>'<option value="'+k+'">'+(v.name||k)+'</option>').join('');ls.onchange=()=>{lang=ls.value;$('#titleName').textContent=tr(PROJECT.title||'未命名作品');if(sc)show()};$('#start').onclick=start;$('#again').onclick=start;$('#endBack').onclick=()=>{$('#end').classList.add('hidden');$('#title').classList.remove('hidden')};$('#back').onclick=()=>{location.reload()};$('#mute').onclick=()=>{muted=!muted;$('#mute').textContent=muted?'🔇 音效':'🔊 音效'};$('#app').onclick=e=>{if(e.target.closest('button')||e.target.closest('#choices'))return;if(sc&&di<dlg().length){di++;tone(620);show()}}})();${'</'}script></body></html>`;
 }
 function exportPlayable(){
   if(!project||!project.scenes.length){toast('暂无可导出的项目');return;}

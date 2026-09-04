@@ -13,6 +13,7 @@ const TEST=`
   ck('项目标题和场景数据已嵌入',outHtml.includes(before)&&outHtml.includes('s_start')&&outHtml.includes('放学后'));
   ck('独立导出页含开始/选项/结局运行时',outHtml.includes('id="start"')&&outHtml.includes('id="choices"')&&outHtml.includes('id="end"')&&outHtml.includes('function go'));
   ck('可玩HTML含角色与表情运行时',outHtml.includes('id="cast"')&&outHtml.includes('function cast(d)')&&outHtml.includes('d.expressionId')&&outHtml.includes('cast(d)'));
+  ck('可玩HTML继承高级 UI 配置',outHtml.includes('function applyUI()')&&outHtml.includes('fontFamily')&&outHtml.includes('transitionMs')&&outHtml.includes('charTransition')&&outHtml.includes('cast-slide'));
   ck('导出页含本地音效按钮',outHtml.includes('id="mute"')&&outHtml.includes('AudioContext'));
   exportPlayable();
   ck('exportPlayable 实际创建 Blob',made.startsWith('<!doctype html>')&&made.length>7000,{bytes:made.length});
