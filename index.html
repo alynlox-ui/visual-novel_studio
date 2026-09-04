@@ -768,6 +768,7 @@ let project=null;
 let selectedSceneId=null;
 const editorSaveKey='gvn_editor_project_v1';
 const editorDraftApp='visual-novel-studio-draft';
+const legacyEditorDraftApps=new Set(['galgame-studio-draft']);
 let draftInfo={savedAt:null,restored:false};
 let draftSaveTimer=null;
 function defaultScene(name,x,y){return{id:uid('s'),name:name||'新场景',x:x||100,y:y||100,bg:'#ffffff',bgImage:'',speaker:'',text:'',video:'',videoMuted:true,bgm:'',bgmVolume:0.6,ending:null,setFlags:[],next:'',autoBranches:[],choices:[],dialogues:[],characters:[]};}
@@ -1081,7 +1082,7 @@ function loadEditor(){
     const raw=localStorage.getItem(editorSaveKey);
     if(raw){
       const data=JSON.parse(raw);
-      const wrapped=(data&&data.app===editorDraftApp&&data.project&&Array.isArray(data.project.scenes))?data:null;
+      const wrapped=(data&&data.project&&Array.isArray(data.project.scenes)&&(data.app===editorDraftApp||legacyEditorDraftApps.has(data.app)))?data:null;
       project=migrateProject(wrapped?wrapped.project:data);
       if(wrapped&&wrapped.selectedSceneId&&project.scenes.some(s=>s.id===wrapped.selectedSceneId)){
         selectedSceneId=wrapped.selectedSceneId;

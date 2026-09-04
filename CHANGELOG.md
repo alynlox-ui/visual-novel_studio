@@ -72,7 +72,7 @@
 
 ---
 
-> 本次更新已同步至线上版：https://galgame-studio.onrender.com  
+> 本次更新已同步至线上版：https://visual-novel-studio.onrender.com
 > 本地版和 Render 部署包也已同步更新。
 
 感谢每一位创作者的支持，期待你用 Galgame 制作工坊做出更动人的故事 💕
