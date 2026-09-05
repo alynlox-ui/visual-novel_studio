@@ -312,7 +312,7 @@ header .logo{font-size:15px;line-height:1.2;white-space:nowrap}
     </div>
     <div class="header-row header-secondary">
       <div class="feature-menu" id="projectMenu"><button type="button" class="feature-menu-trigger" id="projectMenuButton" aria-expanded="false" aria-controls="projectMenuPanel">📁 项目功能</button><div id="projectMenuPanel" class="feature-menu-panel hidden">
-        <button id="btnUndo" title="撤销 (Ctrl+Z)">↩ 撤销</button><button id="btnRedo" title="重做 (Ctrl+Y)">↪ 重做</button><button id="btnHist" title="项目版本快照：回滚 / 对比 / 历史备份">🗂 版本</button><button id="btnBatch" title="批量替换文本和调整数值">⚡ 批量</button><button id="btnStats" title="查看本地试玩数据分析">📊 统计</button><button id="btnAudit" title="检查项目结构、断链和性能风险">🩺 体检</button><button id="btnI18n" title="管理多语言翻译并导出多语言游戏">🌐 多语言</button><button id="btnNew">新建</button><button id="btnSample">载入示例</button><button id="btnSaveDraft" title="将当前项目保存为浏览器本地草稿">💾 保存</button><button id="btnExport">导出项目 JSON</button><button id="btnExportPlay" title="导出双击即可玩的单文件 HTML">🎮 导出可玩 HTML</button><button id="btnExportGame" title="导出含 Windows EXE、人物立绘、动画与项目数据的完整游戏包">🪟 导出完整游戏</button><button id="btnImport">导入项目</button><span id="draftStatus" class="draft-status"></span>
+        <button id="btnUndo" title="撤销 (Ctrl+Z)">↩ 撤销</button><button id="btnRedo" title="重做 (Ctrl+Y)">↪ 重做</button><button id="btnHist" title="项目版本快照：回滚 / 对比 / 历史备份">🗂 版本</button><button id="btnBatch" title="批量替换文本和调整数值">⚡ 批量</button><button id="btnStats" title="查看本地试玩数据分析">📊 统计</button><button id="btnAudit" title="检查项目结构、断链和性能风险">🩺 体检</button><button id="btnI18n" title="管理多语言翻译并导出多语言游戏">🌐 多语言</button><button id="btnNew">新建</button><button id="btnSample">载入示例</button><button id="btnSaveDraft" title="将当前项目保存为浏览器本地草稿">💾 保存</button><button id="btnExport">导出项目 JSON</button><button id="btnExportPlay" title="导出双击即可玩的单文件 HTML">🎮 导出可玩 HTML</button><button id="btnExportGame" title="导出单个原生 Windows EXE 应用：无需 Electron、网页文件或额外安装">🪟 导出 Windows 应用</button><button id="btnImport">导入项目</button><span id="draftStatus" class="draft-status"></span>
       </div></div>
       <div class="feature-menu" id="designMenu"><button type="button" class="feature-menu-trigger" id="designMenuButton" aria-expanded="false" aria-controls="designMenuPanel">🎨 设计功能</button><div id="designMenuPanel" class="feature-menu-panel right hidden">
         <button id="btnFlags">⚙ 数值</button><button id="btnCharModule">🎭 人物</button><button id="btnOutline">📖 大纲</button><button id="btnAutoLayout">自动布局</button><button id="btnUiSettings">🎨 UI 设置</button><button id="btnAi">🤖 AI 辅助</button><button id="btnAssets" title="搜索并应用内置或自定义素材">🧰 素材库</button>
@@ -3381,17 +3381,59 @@ function exportPlayable(){
   const blob=new Blob([playableHtml()],{type:'text/html;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(project.title||'galgame')+'.play.html';a.click();URL.revokeObjectURL(a.href);toast('✅ 已导出可运行 HTML，双击即可试玩');
 }
+async function nativeRasterizeSvg(url){
+  if(!/^data:image\/svg\+xml[;,]/i.test(url||''))return url;
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const max=2048,w=Math.max(1,img.naturalWidth||1200),h=Math.max(1,img.naturalHeight||675),scale=Math.min(1,max/Math.max(w,h));
+        const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale));
+        const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL('image/png'));
+      }catch(e){reject(new Error('SVG 素材转换失败：'+e.message));}
+    };
+    img.onerror=()=>reject(new Error('SVG 素材无法读取'));
+    img.src=url;
+  });
+}
+async function prepareNativeProject(){
+  const copy=migrateProject(deepClone(project)),cache=new Map();
+  const convert=async value=>{
+    if(typeof value==='string'&&/^data:image\/svg\+xml[;,]/i.test(value)){
+      if(!cache.has(value))cache.set(value,nativeRasterizeSvg(value));
+      return cache.get(value);
+    }
+    if(Array.isArray(value)){for(let i=0;i<value.length;i++)value[i]=await convert(value[i]);}
+    else if(value&&typeof value==='object'){for(const key of Object.keys(value))value[key]=await convert(value[key]);}
+    return value;
+  };
+  return convert(copy);
+}
 async function exportCompleteGame(){
   if(!project||!project.scenes.length){toast('暂无可导出的项目');return;}
-  const btn=$('#btnExportGame'),old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='正在打包…';}
+  const btn=$('#btnExportGame'),old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='正在生成应用…';}
   try{
-    const res=await fetch('/api/export-game',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({project:migrateProject(deepClone(project)),gameHtml:playableHtml()})});
+    const nativeProject=await prepareNativeProject();
+    const notes=nativeLimitationNotes();
+    const res=await fetch('/api/export-game',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({project:nativeProject})});
     if(!res.ok){let msg='HTTP '+res.status;try{const d=await res.json();if(d.error)msg=d.error;}catch(e){}throw new Error(msg);}
-    const blob=await res.blob(),name=(project.title||'visual-novel-game').replace(/[<>:"/\\|?*]/g,'_')+'.windows.zip';
+    const blob=await res.blob(),name=(project.title||'visual-novel-game').replace(/[<>:"/\\|?*]/g,'_')+'.exe';
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-    toast('✅ 完整 Windows 游戏包已导出（含 EXE、游戏本体、项目数据与素材）');
-  }catch(e){toast('❌ 完整游戏导出失败：'+e.message+'。请使用已部署版本或本地 npm start。');}
+    toast('✅ 原生 Windows 应用已导出（单个 EXE，双击直接运行）'+(notes?' 提示：'+notes:''));
+  }catch(e){toast('❌ 原生应用导出失败：'+e.message+'。请使用已部署版本或本地 npm start。');}
   finally{if(btn){btn.disabled=false;btn.textContent=old;}}
+}
+function nativeLimitationNotes(){
+  let videos=0,audios=0;
+  for(const s of project.scenes||[]){
+    if(s.bgVideo||s.video||s.cgVideo)videos++;
+    if(s.bgm)audios++;
+    for(const d of s.dialogues||[])if(d.voice)audios++;
+  }
+  const parts=[];
+  if(videos)parts.push(videos+' 处视频');
+  if(audios)parts.push(audios+' 处音频');
+  return parts.length?'原生版暂不播放'+parts.join('、')+'：请用「导出可玩 HTML」保留完整演出':'';
 }
 function exportProject(){
   const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});

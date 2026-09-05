@@ -4,10 +4,9 @@
   "description": "可视化 Galgame 制作工坊 - 无需编程，支持分支、结局判定、存档读档、演示模式",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "archiver": "^7.0.1"
+    "start": "node server.js",
+    "test": "node export_game_smoke_test.js && node native_export_integration_test.js",
+    "build:native-player": "cmd.exe /d /c native-player\\build.cmd"
   },
   "engines": {
     "node": ">=16"

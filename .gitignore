@@ -1,6 +1,4 @@
 node_modules/
 *.log
-player-shell/node_modules/
-player-shell/dist/win-unpacked/
-player-shell/dist/builder-debug.yml
-player-shell/dist/builder-effective-config.yaml
+native-player/dist/*
+!native-player/dist/visual-novel-native.exe
