@@ -1442,17 +1442,23 @@ function initFlowEvents(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(pendingFlowLink||dragLink)){e.preventDefault();if(pendingFlowLink)cancelFlowLink();if(dragLink){dragLink=null;if(tempLine){try{dragLayer.removeChild(tempLine);}catch(err){}tempLine=null;}toast('已取消连线');}}});
   svg.addEventListener('wheel',e=>{e.preventDefault();const f=Math.exp(-e.deltaY*0.0012);flowK=Math.min(3,Math.max(0.15,flowK*f));applyFlowTransform();},{passive:false});
 }
+function autoLayoutLevels(){
+  const ids=project.scenes.map(s=>s.id),valid=new Set(ids),edges=new Map(ids.map(id=>[id,[]]));
+  project.scenes.forEach(sc=>{const nexts=[];if(sc.next)nexts.push(sc.next);(sc.autoBranches||[]).forEach(a=>nexts.push(a.target));(sc.choices||[]).forEach(c=>nexts.push(c.target));edges.set(sc.id,[...new Set(nexts.filter(id=>valid.has(id)))]);});
+  const reachable=new Set(),walk=[project.startScene];while(walk.length){const id=walk.pop();if(!valid.has(id)||reachable.has(id))continue;reachable.add(id);(edges.get(id)||[]).forEach(n=>walk.push(n));}
+  let seq=0;const index={},low={},stack=[],onStack=new Set(),parts=[],partOf={};
+  function strong(id){index[id]=low[id]=seq++;stack.push(id);onStack.add(id);(edges.get(id)||[]).forEach(n=>{if(!reachable.has(n))return;if(index[n]===undefined){strong(n);low[id]=Math.min(low[id],low[n]);}else if(onStack.has(n))low[id]=Math.min(low[id],index[n]);});if(low[id]===index[id]){const part=[];let n;do{n=stack.pop();onStack.delete(n);partOf[n]=parts.length;part.push(n);}while(n!==id);parts.push(part);}}
+  ids.forEach(id=>{if(reachable.has(id)&&index[id]===undefined)strong(id);});
+  const dag=parts.map(()=>new Set()),indeg=parts.map(()=>0),depth=parts.map(()=>0);
+  reachable.forEach(id=>(edges.get(id)||[]).forEach(n=>{if(!reachable.has(n))return;const a=partOf[id],b=partOf[n];if(a!==b&&!dag[a].has(b)){dag[a].add(b);indeg[b]++;}}));
+  const queue=[];indeg.forEach((n,i)=>{if(n===0)queue.push(i);});while(queue.length){const a=queue.shift();dag[a].forEach(b=>{depth[b]=Math.max(depth[b],depth[a]+1);if(--indeg[b]===0)queue.push(b);});}
+  const levels={};reachable.forEach(id=>levels[id]=depth[partOf[id]]);ids.forEach(id=>{if(!(id in levels))levels[id]=0;});return levels;
+}
 function autoLayout(){
   if(!project.startScene||!getScene(project.startScene))return;
-  const levels={};const visited=new Set();let queue=[project.startScene];levels[project.startScene]=0;visited.add(project.startScene);
-  while(queue.length){const id=queue.shift();const sc=getScene(id);if(!sc)continue;const lv=levels[id];
-    const nexts=[];if(sc.next)nexts.push(sc.next);(sc.autoBranches||[]).forEach(a=>nexts.push(a.target));(sc.choices||[]).forEach(c=>nexts.push(c.target));
-    nexts.forEach(n=>{if(n&&!visited.has(n)){visited.add(n);levels[n]=lv+1;queue.push(n);}});
-  }
-  project.scenes.forEach(s=>{if(!(s.id in levels))levels[s.id]=0;});
-  const cols={};Object.keys(levels).forEach(id=>{const lv=levels[id];(cols[lv]=cols[lv]||[]).push(id);});
-  Object.keys(cols).forEach(lv=>{cols[lv].forEach((id,i)=>{const sc=getScene(id);sc.x=60+lv*300;sc.y=80+i*140;});});
-  renderFlow();saveEditor();toast('已自动布局');
+  const levels=autoLayoutLevels(),cols={};project.scenes.forEach(s=>{const lv=levels[s.id]||0;(cols[lv]=cols[lv]||[]).push(s.id);});
+  Object.keys(cols).sort((a,b)=>a-b).forEach(lv=>{cols[lv].forEach((id,i)=>{const sc=getScene(id);sc.x=60+Number(lv)*300;sc.y=80+i*140;});});
+  renderFlow();saveEditor();toast('已按剧情层级纵列布局');
 }
 /* ---------------- 人物模块（编辑器） ---------------- */
 let selectedCharId=null;
