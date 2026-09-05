@@ -336,6 +336,7 @@ header .logo{font-size:15px;line-height:1.2;white-space:nowrap}
           <marker id="arrowChoice" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 z" fill="#00A1D6"/></marker>
         </defs>
         <g id="flowWorld"></g>
+        <g id="flowDragLayer"></g>
       </svg>
     </div>
     <aside id="inspector"></aside>
@@ -1251,6 +1252,16 @@ function inspectorHTML(){
 }
 function renderInspector(){$('#inspector').innerHTML=inspectorHTML();lastInspectorInput=null;}
 function flowPortY(type){return type==='next'?24:(type==='auto'?40:56);}
+function flowCurveD(p1,p2,type,index=0,total=1){
+  const dx=p2.x-p1.x,dy=p2.y-p1.y,dist=Math.max(1,Math.hypot(dx,dy));
+  const nx=-dy/dist,ny=dx/dist;
+  const baseBend=Math.min(84,Math.max(32,dist*0.18));
+  const branchBend=type==='choice'&&total>1?index*12:0;
+  const bend=baseBend+branchBend;
+  const c1={x:p1.x+dx*0.34+nx*bend,y:p1.y+dy*0.34+ny*bend};
+  const c2={x:p1.x+dx*0.66+nx*bend,y:p1.y+dy*0.66+ny*bend};
+  return `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
+}
 function renderFlow(){
   const g=$('#flowWorld');g.innerHTML='';
   const scenes=project.scenes;const map={};scenes.forEach(s=>map[s.id]=s);
@@ -1259,8 +1270,7 @@ function renderFlow(){
     const dx=p2.x-p1.x,dy=p2.y-p1.y;
     const path=document.createElementNS(SVGNS,'path');
     const sideOffset=type==='choice'?((index-(total-1)/2)*18):0;
-    const c1={x:p1.x+dx*0.35,y:p1.y+dy*0.3+sideOffset},c2={x:p1.x+dx*0.65,y:p1.y+dy*0.7+sideOffset};
-    path.setAttribute('d',`M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`);
+    path.setAttribute('d',flowCurveD(p1,p2,type,index,total));
     path.setAttribute('class','flow-edge flow-edge-'+type);
     if(type==='next'){path.setAttribute('stroke','#7C8796');path.setAttribute('stroke-width','2.8');path.setAttribute('marker-end','url(#arrowNext)');}
     if(type==='auto'){path.setAttribute('stroke','#D69A00');path.setAttribute('stroke-width','2.4');path.setAttribute('stroke-dasharray','8 5');path.setAttribute('marker-end','url(#arrowAuto)');}
@@ -1305,10 +1315,14 @@ function rectEdgePoint(node,toward){
 /* 流程图交互 */
 let flowTx=20,flowTy=20,flowK=1;
 let pendingFlowLink=null;
-function applyFlowTransform(){$('#flowWorld').setAttribute('transform',`translate(${flowTx},${flowTy}) scale(${flowK})`);}
+function applyFlowTransform(){
+  const transform=`translate(${flowTx},${flowTy}) scale(${flowK})`;
+  $('#flowWorld').setAttribute('transform',transform);
+  $('#flowDragLayer').setAttribute('transform',transform);
+}
 function clientToWorld(e){const r=$('#flowSvg').getBoundingClientRect();return{x:(e.clientX-r.left-flowTx)/flowK,y:(e.clientY-r.top-flowTy)/flowK};}
 function initFlowEvents(){
-  const svg=$('#flowSvg');let dragNode=null,offX=0,offY=0,panning=false,panSX=0,panSY=0,panTX=0,panTY=0,pointerMoved=false;
+  const svg=$('#flowSvg'),dragLayer=$('#flowDragLayer');let dragNode=null,offX=0,offY=0,panning=false,panSX=0,panSY=0,panTX=0,panTY=0,pointerMoved=false;
   const ctxMenu=$('#flowContextMenu');
   let dragLink=null,tempLine=null;
   const hideCtx=()=>{if(ctxMenu)ctxMenu.classList.add('hidden');};
@@ -1349,14 +1363,15 @@ function initFlowEvents(){
     renderAll();saveEditor();toast('已创建新场景并连接');
   }
   const startDragLink=(from,type,e)=>{
+    const src=getScene(from);if(!src)return;
     dragLink={from:from,type:type};
     pendingFlowLink=null;hideCtx();
-    const p0=clientToWorld(e);
+    const start={x:src.x+NODE_W,y:src.y+flowPortY(type)};
     tempLine=document.createElementNS(SVGNS,'line');
     tempLine.setAttribute('class','link-drag');
-    tempLine.setAttribute('x1',p0.x);tempLine.setAttribute('y1',p0.y);
-    tempLine.setAttribute('x2',p0.x);tempLine.setAttribute('y2',p0.y);
-    svg.appendChild(tempLine);
+    tempLine.setAttribute('x1',start.x);tempLine.setAttribute('y1',start.y);
+    tempLine.setAttribute('x2',start.x);tempLine.setAttribute('y2',start.y);
+    dragLayer.appendChild(tempLine);
     svg.setPointerCapture(e.pointerId);
     toast('拖到目标场景后松开：'+(type==='next'?'默认下一场景':(type==='auto'?'自动分支':'选项分支')));
   };
@@ -1384,7 +1399,7 @@ function initFlowEvents(){
     if(targetEl){finishLink(dragLink.from,dragLink.type,targetEl.dataset.id);}
     else{toast('已取消拖拽连线');}
     dragLink=null;
-    if(tempLine){try{svg.removeChild(tempLine);}catch(err){}tempLine=null;}
+    if(tempLine){try{dragLayer.removeChild(tempLine);}catch(err){}tempLine=null;}
     pendingFlowLink=null;
     renderFlow();
   };
@@ -1424,7 +1439,7 @@ function initFlowEvents(){
       }
     }else{hideCtx();}
   });
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(pendingFlowLink||dragLink)){e.preventDefault();if(pendingFlowLink)cancelFlowLink();if(dragLink){dragLink=null;if(tempLine){try{svg.removeChild(tempLine);}catch(err){}tempLine=null;}toast('已取消连线');}}});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(pendingFlowLink||dragLink)){e.preventDefault();if(pendingFlowLink)cancelFlowLink();if(dragLink){dragLink=null;if(tempLine){try{dragLayer.removeChild(tempLine);}catch(err){}tempLine=null;}toast('已取消连线');}}});
   svg.addEventListener('wheel',e=>{e.preventDefault();const f=Math.exp(-e.deltaY*0.0012);flowK=Math.min(3,Math.max(0.15,flowK*f));applyFlowTransform();},{passive:false});
 }
 function autoLayout(){
