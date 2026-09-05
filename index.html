@@ -1246,11 +1246,12 @@ function inspectorHTML(){
   </div>`;
 }
 function renderInspector(){$('#inspector').innerHTML=inspectorHTML();lastInspectorInput=null;}
+function flowPortY(type){return type==='next'?24:(type==='auto'?40:56);}
 function renderFlow(){
   const g=$('#flowWorld');g.innerHTML='';
   const scenes=project.scenes;const map={};scenes.forEach(s=>map[s.id]=s);
   const edge=(src,tgt,type,label,index=0,total=1)=>{
-    const p1=rectEdgePoint(src,tgt);const p2=rectEdgePoint(tgt,src);
+    const p1={x:src.x+NODE_W,y:src.y+flowPortY(type)};const p2=rectEdgePoint(tgt,src);
     const dx=p2.x-p1.x,dy=p2.y-p1.y;
     const path=document.createElementNS(SVGNS,'path');
     const sideOffset=type==='choice'?((index-(total-1)/2)*18):0;
@@ -1280,8 +1281,8 @@ function renderFlow(){
     const name=document.createElementNS(SVGNS,'text');name.setAttribute('x',NODE_W/2);name.setAttribute('y',30);name.setAttribute('text-anchor','middle');name.setAttribute('class','nname');name.textContent=trunc(sc.name||sc.id,14);node.appendChild(name);
     const id=document.createElementNS(SVGNS,'text');id.setAttribute('x',NODE_W/2);id.setAttribute('y',50);id.setAttribute('text-anchor','middle');id.setAttribute('class','nid');id.textContent=sc.id;node.appendChild(id);
     if(sc.ending){const star=document.createElementNS(SVGNS,'text');star.setAttribute('x',NODE_W-14);star.setAttribute('y',20);star.setAttribute('text-anchor','middle');star.setAttribute('class','nbadge');star.textContent='★';node.appendChild(star);}
-    [['next',24,'#9499A0','拖到目标场景：设为默认下一场景'],['auto',40,'#FFB800','拖到目标场景：添加自动分支'],['choice',56,'#00A1D6','拖到目标场景：添加选项分支']].forEach(([pt,py,color,tip])=>{
-      const c=document.createElementNS(SVGNS,'circle');c.setAttribute('cx',NODE_W);c.setAttribute('cy',py);c.setAttribute('r',6);c.setAttribute('fill',color);c.setAttribute('stroke','#fff');c.setAttribute('stroke-width','2');c.setAttribute('class','flow-port');c.dataset.portType=pt;c.dataset.from=sc.id;
+    [['next','#9499A0','拖到目标场景：设为默认下一场景'],['auto','#FFB800','拖到目标场景：添加自动分支'],['choice','#00A1D6','拖到目标场景：添加选项分支']].forEach(([pt,color,tip])=>{
+      const c=document.createElementNS(SVGNS,'circle');c.setAttribute('cx',NODE_W);c.setAttribute('cy',flowPortY(pt));c.setAttribute('r',6);c.setAttribute('fill',color);c.setAttribute('stroke','#fff');c.setAttribute('stroke-width','2');c.setAttribute('class','flow-port');c.dataset.portType=pt;c.dataset.from=sc.id;
       const t=document.createElementNS(SVGNS,'title');t.textContent=tip;c.appendChild(t);
       node.appendChild(c);
     });
@@ -1343,7 +1344,6 @@ function initFlowEvents(){
     from.next=s.id;selectedSceneId=s.id;
     renderAll();saveEditor();toast('已创建新场景并连接');
   }
-  const portPosY=type=>type==='next'?24:(type==='auto'?40:56);
   const startDragLink=(from,type,e)=>{
     dragLink={from:from,type:type};
     pendingFlowLink=null;hideCtx();
@@ -1362,7 +1362,7 @@ function initFlowEvents(){
     const p=clientToWorld(e);
     if(src){
       tempLine.setAttribute('x1',src.x+NODE_W);
-      tempLine.setAttribute('y1',src.y+portPosY(dragLink.type));
+      tempLine.setAttribute('y1',src.y+flowPortY(dragLink.type));
     }
     tempLine.setAttribute('x2',p.x);tempLine.setAttribute('y2',p.y);
     const hit=document.elementFromPoint(e.clientX,e.clientY);
