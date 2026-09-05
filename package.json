@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node export_game_smoke_test.js && node native_export_integration_test.js",
+    "test": "node cond_smoke_test.js && node export_game_smoke_test.js && node native_export_integration_test.js",
     "build:native-player": "cmd.exe /d /c native-player\\build.cmd"
   },
   "engines": {

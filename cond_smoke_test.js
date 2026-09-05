@@ -67,6 +67,12 @@ const TEST = `
     check('sceneRead 快捷 chip 存在×2', cnt(html, 'data-insert="sceneRead(') === 2);
     check('endingSeen 快捷 chip 存在×2', cnt(html, 'data-insert="endingSeen(') === 2);
     check('hourBetween 快捷 chip 存在×2', cnt(html, 'data-insert="hourBetween(18,23)"') === 2);
+    // ---- 单文件 Web 导出与编辑器使用同一安全条件语义 ----
+    const exported = playableHtml();
+    check('Web 导出不使用动态 Function/with 求值', !exported.includes("Function('f'") && !exported.includes('with(f)'));
+    check('Web 导出内置安全 ExprParser', exported.includes('class ExprParser') && exported.includes('const COND_FNS='));
+    check('Web 导出支持条件状态函数', exported.includes('sceneRead(id)') && exported.includes('endingSeen(kind,title)') && exported.includes('sceneCount()'));
+    check('Web 导出记录已读场景和解锁结局', exported.includes('readScenes.add(String(id))') && exported.includes('unlockedEndings.push(endingKey)'));
   } catch (e) {
     console.log('FATAL:', e.stack);
     results.push('  ✗ FATAL ' + e.message);
