@@ -239,7 +239,7 @@ header .logo{font-size:15px;line-height:1.2;white-space:nowrap}
 .header-divider{width:1px;height:24px;background:#E3E5E7;flex:none;margin:0 2px}
 .header-group{display:flex;align-items:center;gap:5px;min-width:0}
 .header-group-label{font-size:11px;color:#9499A0;margin-right:2px;white-space:nowrap}
-.feature-menu{position:relative;flex:none}.feature-menu>summary{list-style:none;cursor:pointer;border:1px solid #E3E5E7;border-radius:8px;padding:7px 12px;background:#fff;color:#61666D;font-size:12px;font-weight:700;white-space:nowrap}.feature-menu>summary::-webkit-details-marker{display:none}.feature-menu>summary:after{content:' ▾';color:#9499A0}.feature-menu[open]>summary{border-color:#FB7299;color:#C75C7E}.feature-menu[open]>summary:after{content:' ▴'}.feature-menu-panel{position:absolute;top:calc(100% + 7px);left:0;z-index:180;display:grid;grid-template-columns:repeat(2,minmax(145px,1fr));gap:6px;width:min(420px,90vw);padding:10px;background:#fff;border:1px solid #E3E5E7;border-radius:12px;box-shadow:0 12px 35px rgba(24,25,28,.16)}.feature-menu-panel.right{left:auto;right:0}.feature-menu-panel button{width:100%;text-align:left}.feature-menu-panel .draft-status{grid-column:1/-1}
+.feature-menu{position:relative;flex:none}.feature-menu-trigger{cursor:pointer;border:1px solid #E3E5E7;border-radius:8px;padding:7px 12px;background:#fff;color:#61666D;font-size:12px;font-weight:700;white-space:nowrap}.feature-menu-trigger:after{content:' ▾';color:#9499A0}.feature-menu-trigger[aria-expanded="true"]{border-color:#FB7299;color:#C75C7E}.feature-menu-trigger[aria-expanded="true"]:after{content:' ▴'}.feature-menu-panel{position:fixed;z-index:280;display:grid;grid-template-columns:repeat(2,minmax(145px,1fr));gap:6px;width:min(420px,90vw);padding:10px;background:#fff;border:1px solid #E3E5E7;border-radius:12px;box-shadow:0 12px 35px rgba(24,25,28,.16)}.feature-menu-panel button{width:100%;text-align:left}.feature-menu-panel .draft-status{grid-column:1/-1}
 .header-grow{flex:1;min-width:8px}
 .header-primary button{font-weight:600}
 .header-primary #btnPlay{padding-left:14px;padding-right:14px}
@@ -311,12 +311,12 @@ header .logo{font-size:15px;line-height:1.2;white-space:nowrap}
       <button id="btnHelp" title="打开新手教程与功能说明">✨ 新手教程</button>
     </div>
     <div class="header-row header-secondary">
-      <details class="feature-menu" id="projectMenu"><summary>📁 项目功能</summary><div class="feature-menu-panel">
+      <div class="feature-menu" id="projectMenu"><button type="button" class="feature-menu-trigger" id="projectMenuButton" aria-expanded="false" aria-controls="projectMenuPanel">📁 项目功能</button><div id="projectMenuPanel" class="feature-menu-panel hidden">
         <button id="btnUndo" title="撤销 (Ctrl+Z)">↩ 撤销</button><button id="btnRedo" title="重做 (Ctrl+Y)">↪ 重做</button><button id="btnHist" title="项目版本快照：回滚 / 对比 / 历史备份">🗂 版本</button><button id="btnBatch" title="批量替换文本和调整数值">⚡ 批量</button><button id="btnStats" title="查看本地试玩数据分析">📊 统计</button><button id="btnAudit" title="检查项目结构、断链和性能风险">🩺 体检</button><button id="btnI18n" title="管理多语言翻译并导出多语言游戏">🌐 多语言</button><button id="btnNew">新建</button><button id="btnSample">载入示例</button><button id="btnSaveDraft" title="将当前项目保存为浏览器本地草稿">💾 保存</button><button id="btnExport">导出项目 JSON</button><button id="btnExportPlay" title="导出双击即可玩的单文件 HTML">🎮 导出可玩 HTML</button><button id="btnExportGame" title="导出含 Windows EXE、人物立绘、动画与项目数据的完整游戏包">🪟 导出完整游戏</button><button id="btnImport">导入项目</button><span id="draftStatus" class="draft-status"></span>
-      </div></details>
-      <details class="feature-menu" id="designMenu"><summary>🎨 设计功能</summary><div class="feature-menu-panel right">
+      </div></div>
+      <div class="feature-menu" id="designMenu"><button type="button" class="feature-menu-trigger" id="designMenuButton" aria-expanded="false" aria-controls="designMenuPanel">🎨 设计功能</button><div id="designMenuPanel" class="feature-menu-panel right hidden">
         <button id="btnFlags">⚙ 数值</button><button id="btnCharModule">🎭 人物</button><button id="btnOutline">📖 大纲</button><button id="btnAutoLayout">自动布局</button><button id="btnUiSettings">🎨 UI 设置</button><button id="btnAi">🤖 AI 辅助</button><button id="btnAssets" title="搜索并应用内置或自定义素材">🧰 素材库</button>
-      </div></details>
+      </div></div>
     </div>
   </header>
   <div class="editor-main">
@@ -3487,10 +3487,20 @@ function bindAssetEvents(){
  $('#assetList').addEventListener('click',e=>{const b=e.target.closest('[data-asset-action]');if(!b)return;const card=b.closest('[data-asset-id]');if(b.dataset.assetAction==='apply')applyAsset(card.dataset.assetId);else removeAsset(card.dataset.assetId);});
 }
 
+function closeFeatureMenus(except){
+  $$('.feature-menu').forEach(menu=>{if(menu===except)return;const btn=menu.querySelector('.feature-menu-trigger'),panel=menu.querySelector('.feature-menu-panel');if(btn)btn.setAttribute('aria-expanded','false');if(panel)panel.classList.add('hidden');});
+}
+function positionFeatureMenu(menu){
+  const btn=menu.querySelector('.feature-menu-trigger'),panel=menu.querySelector('.feature-menu-panel');if(!btn||!panel||panel.classList.contains('hidden'))return;
+  const r=btn.getBoundingClientRect(),w=Math.min(420,Math.max(290,innerWidth-20));let left=r.left;if(left+w>innerWidth-10)left=innerWidth-w-10;
+  panel.style.width=w+'px';panel.style.left=Math.max(10,left)+'px';panel.style.top=(r.bottom+7)+'px';
+}
 function bindFeatureMenus(){
   const menus=$$('.feature-menu');
-  menus.forEach(menu=>{menu.addEventListener('toggle',()=>{if(menu.open)menus.forEach(other=>{if(other!==menu)other.open=false;});});menu.addEventListener('click',e=>{if(e.target.closest('.feature-menu-panel button'))menu.open=false;});});
-  document.addEventListener('click',e=>{if(!e.target.closest('.feature-menu'))menus.forEach(m=>m.open=false);});
+  menus.forEach(menu=>{const btn=menu.querySelector('.feature-menu-trigger'),panel=menu.querySelector('.feature-menu-panel');btn.addEventListener('click',e=>{e.stopPropagation();const opening=panel.classList.contains('hidden');closeFeatureMenus(opening?menu:null);panel.classList.toggle('hidden',!opening);btn.setAttribute('aria-expanded',opening?'true':'false');if(opening)positionFeatureMenu(menu);});panel.addEventListener('click',e=>{e.stopPropagation();if(e.target.closest('button'))closeFeatureMenus();});});
+  document.addEventListener('click',e=>{if(!e.target.closest('.feature-menu'))closeFeatureMenus();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeFeatureMenus();});
+  window.addEventListener('resize',()=>menus.forEach(positionFeatureMenu));
 }
 function initEditorEvents(){
   bindFeatureMenus();

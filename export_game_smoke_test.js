@@ -1,7 +1,7 @@
 // export_game_smoke_test.js — 分类菜单与完整 Windows 游戏包导出冒烟测试
 const fs=require('fs');const assert=require('assert');const html=fs.readFileSync('index.html','utf8');const server=fs.readFileSync('server.js','utf8');
 let pass=0;function ok(name,value){assert.ok(value,name);console.log('  ✓ '+name);pass++;}
-ok('项目与设计功能使用默认收起 details',html.includes('id="projectMenu"')&&html.includes('id="designMenu"')&&html.includes('class="feature-menu"'));
+ok('项目与设计功能使用显式可访问折叠按钮',html.includes('id="projectMenuButton"')&&html.includes('id="designMenuButton"')&&html.includes('aria-expanded="false"'));
 ok('同类按钮位于隐藏面板',html.includes('feature-menu-panel')&&html.includes('bindFeatureMenus'));
 ok('完整游戏导出按钮和函数已接入',html.includes('id="btnExportGame"')&&html.includes('function exportCompleteGame()')&&html.includes("'/api/export-game'"));
 ok('服务端提供游戏包与状态接口',server.includes("'/api/export-game'")&&server.includes("'/api/export-game/status'"));
