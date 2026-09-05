@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node server.js"
   },
+  "dependencies": {
+    "archiver": "^7.0.1"
+  },
   "engines": {
     "node": ">=16"
   },
