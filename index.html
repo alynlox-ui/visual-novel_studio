@@ -652,27 +652,32 @@ header .logo{font-size:15px;line-height:1.2;white-space:nowrap}
   <div class="modal-box">
     <h3>📖 帮助中心</h3>
     <div class="hint" style="font-size:13px;line-height:1.8">
-      <details open><summary><b>快速上手</b></summary>
-      1. 左侧管理场景，中间流程图连接剧情，右侧编辑台词、背景、人物与分支。<br>
-      2. 条件支持数值、且/或/括号，以及 <code>chance(30)</code>、<code>hourBetween(18,23)</code>、<code>sceneRead("场景id")</code>、<code>endingSeen("good")</code>。<br>
-      3. 点「运行测试」试玩；点「🎮 导出可玩HTML」生成可分享的独立游戏。</details>
-      <details><summary><b>版本、撤销与数据安全</b></summary>
-      · Ctrl+Z 撤销，Ctrl+Y 或 Ctrl+Shift+Z 重做。<br>
-      · 「🗂 版本」可建快照、对比和回滚；新建、载入示例、导入前会自动快照。<br>
-      · 草稿仍保存在本浏览器；重要项目请同时导出 JSON 文件。API Key 只存在浏览器本地，不进入项目导出。</details>
-      <details><summary><b>批量、统计与体检</b></summary>
-      · 「⚡ 批量」支持全文替换和指定数值批调，操作后可撤销。<br>
-      · 「📊 统计」查看本浏览器试玩中的场景到达、选项偏好和结局次数。<br>
-      · 「🩺 体检」检查断链、孤立场景、错误条件和项目体积。</details>
-      <details><summary><b>AI 与视频任务</b></summary>
-      · AI 面板提供 OpenAI、DeepSeek、通义、智谱预设，不覆盖你的 Key。<br>
-      · 无 API 时可先用校园恋爱、悬疑、分支、多结局等本地灵感模板。<br>
-      · 视频 API 若返回任务 ID，会自动轮询状态和进度；可点「停止轮询」。</details>
-      <details><summary><b>快捷键与常见问题</b></summary>
-      · 播放器：空格/Enter 继续，Backspace/← 后退，A 自动播放，Esc 返回。<br>
-      · 编辑器输入框内 Ctrl+Z 保留浏览器原生文字撤销，不会误回滚整个项目。<br>
-      · AI 报 Failed to fetch：检查 Base URL、网络和服务商 CORS；视频失败可查看任务状态。<br>
-      · 大量 base64 图片会放大项目体积；体检接近 512KB 时建议使用外链素材并导出 JSON 备份。</details>
+      <details open><summary><b>一、项目与数据</b></summary>
+      · <b>新建 / 示例 / 导入 / 保存：</b>从「项目功能」开始；新建、示例和导入前会自动保留快照，编辑内容会保存为浏览器草稿，重要版本请「导出项目 JSON」。<br>
+      · <b>撤销 / 重做 / 版本：</b>普通修改用 Ctrl+Z、Ctrl+Y；「🗂 版本」用于创建快照、对比和回滚。<br>
+      · <b>多语言：</b>打开「🌐 多语言」，添加语言并填写翻译，再在导出设置中选择语言；原文会作为缺失翻译的回退。<br>
+      · <b>统计 / 体检：</b>「📊 统计」查看本浏览器试玩数据；「🩺 体检」检查断链、孤立场景、条件错误和项目体积。</details>
+      <details open><summary><b>二、剧情创作</b></summary>
+      · <b>场景：</b>左侧「＋ 新建」创建场景，选择起始场景；拖动流程图节点，连接输出端口到目标场景。<br>
+      · <b>台词与分支：</b>右侧填写说话人、正文、人物、背景、动作和语音；在选择列表添加选项并填写目标与条件。<br>
+      · <b>条件：</b>直接输入数值比较、且/或/括号；可用 <code>chance(30)</code>、<code>hourBetween(18,23)</code>、<code>sceneRead("场景id")</code>、<code>endingSeen("good")</code>。<br>
+      · <b>台词批编：</b>「💬 台词批编」先筛选范围，再搜索替换；元数据会保留，操作可撤销。<br>
+      · <b>剧情调试：</b>「运行测试」试玩当前项目，「当前场景」从选中场景开始；用调试面板检查变量、条件、保存恢复和结局。</details>
+      <details open><summary><b>三、视觉与素材</b></summary>
+      · <b>人物：</b>「🎭 人物」建立角色和外观；在场景中设置位置、表情、动作和关键帧。<br>
+      · <b>预设：</b>「🎭 预设·章节」先在当前场景捕获角色外观，命名保存；切换场景后点击应用即可回填，不会覆盖角色身份。<br>
+      · <b>素材库：</b>「🧰 素材库」搜索、预览并应用背景、人物和媒体；外链素材适合控制项目体积。<br>
+      · <b>UI 设置 / 主页：</b>用「🎨 UI 设置」修改播放器外观；「🏠 主页·菜单」填写 Logo、背景音乐、开场图，拖动菜单按钮并保存。</details>
+      <details open><summary><b>四、收藏与游戏进度</b></summary>
+      · <b>收藏品：</b>「🖼 收藏品」分别管理 CG、音乐、结局和成就；填写标题、媒体来源、条件和关联场景，在预览中检查锁定状态。<br>
+      · <b>章节：</b>在「🎭 预设·章节」新增章节并选择场景；开启章节选择后，玩家只能跳转到已经到达过的章节。<br>
+      · <b>自动存档：</b>开启进度设置后，场景推进和选择会写入独立的继续存档，不会覆盖手动存档。<br>
+      · <b>已读跳过：</b>开启后，玩家点击「快进」只跳过已读台词，遇到未读内容、选择或结局会停止。</details>
+      <details open><summary><b>五、导出、试玩与快捷键</b></summary>
+      · <b>导出：</b>「🎮 导出可玩 HTML」生成可分享的单文件网页；「🪟 导出 Windows 应用」生成单个 EXE。原生播放器不支持音频输出，音乐条目会明确标注限制。<br>
+      · <b>播放器：</b>空格/Enter 继续，Backspace/← 后退，A 自动播放，P 暂停，H 隐藏界面，B 记录，O 设置，S/L 存档/读档，1-9 选择分支。<br>
+      · <b>数据安全：</b>草稿保存在当前浏览器；API Key 只存在浏览器本地，不进入项目导出。大量 base64 图片会增大文件，建议使用外链并导出 JSON 备份。<br>
+      · <b>AI 与视频：</b>「🤖 AI 辅助」选择服务商预设并填写本地配置；视频任务若返回任务 ID 会显示进度，可停止轮询。</details>
     </div>
     <div class="modal-actions"><button id="btnHelpTutorial" class="primary">✨ 开始新手教程</button><button id="btnHelpClose" class="primary">知道了</button></div>
   </div>
