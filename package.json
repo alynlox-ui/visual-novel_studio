@@ -5,8 +5,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node cond_smoke_test.js && node export_game_smoke_test.js && node native_export_integration_test.js",
-    "build:native-player": "cmd.exe /d /c native-player\\build.cmd"
+    "test": "node debug_workbench_test.js && node collaboration_store_test.js && node release_check.js && node http_verification_run.js && node cond_smoke_test.js && node export_game_smoke_test.js && node experience_features_smoke_test.js && node native_export_integration_test.js",
+    "build:native-player": "cmd.exe /d /c native-player\\build.cmd",
+    "build:web": "node build_release.js web",
+    "build:windows": "node build_release.js windows",
+    "build:macos": "node build_release.js macos",
+    "build:linux": "node build_release.js linux",
+    "check:release": "node release_check.js"
   },
   "engines": {
     "node": ">=16"

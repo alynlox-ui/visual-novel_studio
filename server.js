@@ -7,6 +7,9 @@ const ROOT = __dirname;
 const NATIVE_PLAYER_EXE = path.join(ROOT, 'native-player', 'dist', 'visual-novel-native.exe');
 const MAX_EXPORT_BODY = 96 * 1024 * 1024;
 const NATIVE_PAYLOAD_MAGIC = Buffer.from('VNSNATIVEAPP0001', 'ascii');
+const { scanProject } = require('./release_check');
+const { CollaborationStore } = require('./collaboration_store');
+const collaboration = new CollaborationStore({ id: 'server-local', scenes: [] }, process.env.VNS_COLLAB_FILE || path.join(require('os').homedir(), '.visual-novel-studio', 'collaboration.json'));
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -109,6 +112,30 @@ http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end('OK');
       return;
+    }
+    if (urlPath.startsWith('/api/collaboration') && (!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress) || (req.headers.origin && req.headers.origin !== 'http://' + req.headers.host))) {
+      res.writeHead(403, {'Content-Type':'application/json'});res.end(JSON.stringify({error:'Local same-origin access only'}));return;
+    }
+    if (urlPath === '/api/collaboration/resolve' && req.method === 'POST') {
+      const body = await readJsonBody(req);const ok=collaboration.resolveComment(body.id);res.writeHead(ok?200:404,{'Content-Type':'application/json'});res.end(JSON.stringify({ok}));return;
+    }
+    if (urlPath === '/api/release-check') {
+      const body=req.method==='POST'?await readJsonBody(req):{};
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(scanProject(body.project))); return;
+    }
+    if (urlPath === '/api/collaboration' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(collaboration.exportBundle())); return;
+    }
+    if (urlPath === '/api/collaboration' && req.method === 'POST') {
+      const bundle = await readJsonBody(req); const result = collaboration.mergeIncoming(bundle);
+      res.writeHead(result.ok ? 200 : 409, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(result)); return;
+    }
+    if (urlPath === '/api/collaboration/comments' && req.method === 'POST') {
+      const body = await readJsonBody(req); const comment = collaboration.addComment(body.author, body.text, body.target);
+      res.writeHead(201, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(comment)); return;
+    }
+    if (urlPath === '/api/collaboration/history') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify({ changes: collaboration.changes, comments: collaboration.comments })); return;
     }
     if (urlPath === '/api/export-game' && req.method === 'POST') {
       await exportGame(req, res);

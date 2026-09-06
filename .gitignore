@@ -1,4 +1,6 @@
 node_modules/
 *.log
+dist/
+artifacts/
 native-player/dist/*
 !native-player/dist/visual-novel-native.exe

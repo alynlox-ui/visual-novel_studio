@@ -25,8 +25,10 @@ const project = {
   characters: [],
 };
 
+let assertionCount = 0;
 function assert(condition, message, detail) {
   if (!condition) throw new Error(message + (detail ? ` ${JSON.stringify(detail)}` : ''));
+  assertionCount++;
   console.log('  PASS ' + message);
 }
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
@@ -81,13 +83,24 @@ async function waitReady() {
     const conditionReport = JSON.parse(fs.readFileSync(conditionReportPath, 'utf8'));
     assert(conditionReport.ok === true, 'native conditions match project/read/ending state', conditionReport);
 
+    const behaviorReportPath = path.join(tempDir, 'behavior-self-test.json');
+    const behaviorRun = spawnSync(exePath, [`--behavior-self-test=${behaviorReportPath}`], { encoding: 'utf8', windowsHide: true, timeout: 30000 });
+    assert(behaviorRun.status === 0, 'native behavior self-test executes', { status: behaviorRun.status, error: behaviorRun.error && behaviorRun.error.message, stderr: behaviorRun.stderr });
+    assert(fs.existsSync(behaviorReportPath), 'native behavior self-test writes a report');
+    const behaviorReport = JSON.parse(fs.readFileSync(behaviorReportPath, 'utf8'));
+    assert(behaviorReport.ok === true && behaviorReport.checkCount >= 13, 'native backlog/settings/speed/hide-ui behavior passes', behaviorReport);
+    const behaviorNames = behaviorReport.checks.map(entry => String(entry).split('=')[0]).join(',');
+    for (const expected of ['backlog records first line', 'scene transition recorded', 'settings persisted on disk', 'fast text reveal math', 'hide ui reversible', 'backlog does not rerun flags or scenes']) {
+      assert(behaviorNames.indexOf(expected) >= 0, 'behavior self-test covers "' + expected + '"');
+    }
+
     const screenshotRun = spawnSync(exePath, [`--screenshot=${screenshotPath}`], { encoding: 'utf8', windowsHide: true, timeout: 30000 });
     assert(screenshotRun.status === 0, 'exported application opens and exits after rendering a scene', { status: screenshotRun.status, error: screenshotRun.error && screenshotRun.error.message, stderr: screenshotRun.stderr });
     assert(fs.existsSync(screenshotPath) && fs.statSync(screenshotPath).size > 10000, 'native game window produces a non-empty screenshot', { bytes: fs.existsSync(screenshotPath) ? fs.statSync(screenshotPath).size : 0 });
     const png = fs.readFileSync(screenshotPath);
     assert(png.slice(1, 4).toString('ascii') === 'PNG', 'rendered window screenshot is a valid PNG');
     console.log('SCREENSHOT=' + screenshotPath);
-    console.log('========== Native export integration: 15 passed / 0 failed ==========');
+    console.log(`========== Native export integration: ${assertionCount} passed / 0 failed ==========`);
   } finally {
     try { server.kill(); } catch (_) {}
     await sleep(200);

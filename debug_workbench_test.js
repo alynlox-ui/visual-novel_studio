@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),{StoryDebugSession}=require('./debug_workbench');
+const project={id:'debug',startScene:'a',flags:{trust:0},scenes:[{id:'a',text:'Hello',setFlags:[{flag:'trust',op:'+',value:1}],choices:[{text:'Pass',cond:'trust >= 1 && hourNow() == 12',target:'b'},{text:'Blocked',cond:'trust < 1',target:'c'}]},{id:'b',ending:{kind:'good',title:'End'}},{id:'c'}]};
+const s=new StoryDebugSession(project);assert(s.start().ok);assert.equal(s.state.flags.trust,1);assert.equal(s.advance().type,'dialogue');const save=s.snapshot();assert.equal(s.advance().type,'choices');assert.equal(s.advance(1).reason,'choice-unavailable');assert.equal(s.advance(0).type,'ending');assert.equal(s.state.status,'success');s.restore(save);assert.equal(s.state.sceneId,'a');assert.equal(s.state.flags.trust,1);
+const copy=new StoryDebugSession(project);copy.restore(JSON.parse(JSON.stringify(save)));assert.deepEqual(copy.snapshot(),save);assert.deepEqual(copy.advance(0),s.advance(0));assert.deepEqual(copy.report(),s.report());
+const fail=new StoryDebugSession({startScene:'x',scenes:[{id:'x'}]});fail.start();assert.equal(fail.advance().reason,'dead-end');assert.equal(fail.state.status,'failure');assert.throws(()=>fail.restore(save));
+for(const expr of ['globalThis.process.exit()','constructor("return 1")()','trust; 1','trust.constructor','abs.constructor(1)']){const t=new StoryDebugSession(project);assert.equal(t.condition(expr),false);assert.equal(t.state.status,'failure');}
+const a=new StoryDebugSession(project,{seed:42}),b=new StoryDebugSession(project,{seed:42});for(let i=0;i<20;i++)assert.equal(a.condition('chance(50)'),b.condition('chance(50)'));
+const html=fs.readFileSync('index.html','utf8');const parser=html.slice(html.indexOf('class ExprParser{'),html.indexOf('function evalCond'));assert(parser.includes('this.functions||COND_FNS'));
+console.log('PASS deterministic entry, flags, choices, success, failure, recovery, save/reload, seeded conditions, unsafe-input rejection');
