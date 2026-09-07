@@ -162,6 +162,19 @@ namespace VisualNovelNativePlayer
                     form.ResetTiming();
                     form.TickPlayback(1);
                     check("instant text reveal math", form.VisibleText.Length == 7);
+                    var gated = new CollectionEntry { id = "scene-gated-" + Guid.NewGuid().ToString("N"), sceneId = "not-visited", condition = "trust == 1" };
+                    project.experience.collections["cgs"].Add(gated);
+                    form.StartGame();
+                    check("gallery sceneId remains locked before visit", !form.EntryUnlockedFor("cgs", gated));
+                    form.Advance(); form.Advance();
+                    gated.sceneId = "end";
+                    form.RefreshGalleryUnlocks();
+                    check("gallery unlocks after target visit", form.EntryUnlockedFor("cgs", gated));
+                    check("initial and transition autosave exists", File.Exists(form.AutosaveFilePath));
+                    check("autosave separate from manual slots", form.AutosaveFilePath != GameForm.ManualSlotFile(project, 0) && form.AutosaveFilePath != GameForm.ManualSlotFile(project, 1));
+                    form.StartGame();
+                    check("chapters persist across restart", form.IsChapterSceneAvailable("end"));
+                    check("missing chapter rejected", !form.TryJumpToChapter("missing"));
                     form.SetTextSpeed(60);
                 }
                 PlayerSettings reloaded = PlayerSettings.Load(project);
@@ -372,6 +385,8 @@ namespace VisualNovelNativePlayer
         public string text { get; set; }
         public string next { get; set; }
         public string video { get; set; }
+        public bool? videoMuted { get; set; }
+        public double? bgmVolume { get; set; }
         public string bgm { get; set; }
         public List<DialogueData> dialogues { get; set; }
         public List<ChoiceData> choices { get; set; }
@@ -679,7 +694,82 @@ namespace VisualNovelNativePlayer
         private int galleryScrollStep, chaptersScrollStep;
         private bool openingVisible, openingClosing;
         private double openingAlpha, openingHoldRemaining;
+        private readonly NativeMedia bgmMedia = new NativeMedia(), voiceMedia = new NativeMedia(), videoMedia = new NativeMedia();
+        private string mediaSceneKey = null, mediaLineKey = null;
+        private double masterVolume = 1;
+        private Panel videoPanel;
+        private bool mediaPaused;
+        private double mediaRate = 1;
         private double playbackRate = 1, elapsed;
+        private void MediaAction(Action action)
+        {
+            try { action(); } catch (Exception ex) { canvas.ShowNotice(ex.Message); }
+        }
+        private void SyncMedia()
+        {
+            string key = mode == PlayerMode.Title ? "title" : CurrentSceneId;
+            if (key != mediaSceneKey)
+            {
+                mediaSceneKey = key; mediaLineKey = null;
+                MediaAction(delegate {
+                    bgmMedia.Open(mode == PlayerMode.Title ? project.home.bgm : scene == null ? "" : scene.bgm, true, IntPtr.Zero);
+                    bgmMedia.SetVolume(masterVolume * (mode == PlayerMode.Title || scene == null ? 1 : scene.bgmVolume ?? .6)); bgmMedia.SetRate(playbackRate); bgmMedia.Play();
+                });
+                MediaAction(delegate {
+                    string video = mode == PlayerMode.Title || scene == null ? "" : scene.video;
+                    videoPanel.Visible = !String.IsNullOrWhiteSpace(video);
+                    try {
+                        videoMedia.Open(video, false, videoPanel.Handle);
+                        if (videoPanel.Visible) videoMedia.Resize(videoPanel.Width, videoPanel.Height);
+                        videoMedia.SetVolume(scene != null && scene.videoMuted == false ? masterVolume : 0); videoMedia.SetRate(playbackRate); videoMedia.Play();
+                    } catch { videoPanel.Visible = false; throw; }
+                });
+            }
+            string line = mode == PlayerMode.Playing ? CurrentLineKey() : "";
+            if (line != mediaLineKey)
+            {
+                mediaLineKey = line;
+                MediaAction(delegate {
+                    voiceMedia.Open(mode == PlayerMode.Playing && CurrentDialogue != null ? CurrentDialogue.voice : "", false, IntPtr.Zero);
+                    voiceMedia.SetVolume(masterVolume); voiceMedia.SetRate(playbackRate); voiceMedia.Play();
+                });
+            }
+            foreach (NativeMedia channel in new[] { bgmMedia, voiceMedia, videoMedia })
+            {
+                NativeMedia media = channel;
+                MediaAction(delegate {
+                    if (mediaRate != playbackRate) media.SetRate(playbackRate);
+                    if (paused) media.Pause(); else if (mediaPaused) media.Resume();
+                    media.Tick();
+                });
+            }
+            MediaAction(delegate { galleryMedia.Tick(); });
+            mediaPaused = paused; mediaRate = playbackRate;
+        }
+        internal bool PlayGalleryMusic(int index)
+        {
+            IList<CollectionEntry> entries = GalleryEntriesFor("music");
+            if (index < 0 || index >= entries.Count || !EntryUnlockedFor("music", entries[index])) return false;
+            bool played = false;
+            MediaAction(delegate {
+                galleryMedia.Open(entries[index].source, true, IntPtr.Zero);
+                galleryMedia.SetVolume(masterVolume); galleryMedia.Play();
+                played = galleryMedia.Mode == "playing";
+            });
+            return played;
+        }
+        private void SetMasterVolume(double value)
+        {
+            masterVolume = Math.Max(0, Math.Min(1, value));
+            try { bgmMedia.SetVolume(masterVolume * (mode == PlayerMode.Title || scene == null ? 1 : scene.bgmVolume ?? .6)); voiceMedia.SetVolume(masterVolume); videoMedia.SetVolume(scene != null && scene.videoMuted == false ? masterVolume : 0); }
+            catch (Exception ex) { canvas.ShowNotice(ex.Message); }
+            canvas.ShowNotice("音量 " + (int)(masterVolume * 100) + "%");
+        }
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) { playbackTimer.Dispose(); bgmMedia.Dispose(); voiceMedia.Dispose(); videoMedia.Dispose(); }
+            base.Dispose(disposing);
+        }
         private int revealed;
         private readonly Timer playbackTimer = new Timer();
         private readonly System.Diagnostics.Stopwatch clock = new System.Diagnostics.Stopwatch();
@@ -766,10 +856,13 @@ namespace VisualNovelNativePlayer
             canvas.Dock = DockStyle.Fill;
             Controls.Add(canvas);
             Controls.Add(toolbar);
+            videoPanel = new Panel { Left = 20, Top = 20, Width = 640, Height = 360, Visible = false, BackColor = Color.Black };
+            canvas.Controls.Add(videoPanel);
+            videoPanel.Resize += delegate { try { videoMedia.Resize(videoPanel.Width, videoPanel.Height); } catch (Exception ex) { canvas.ShowNotice(ex.Message); } };
             KeyDown += OnGameKeyDown;
             playbackTimer.Interval = 16;
             clock.Start();
-            playbackTimer.Tick += delegate { double dt = clock.Elapsed.TotalMilliseconds; clock.Restart(); TickPlayback(Math.Min(100, dt)); TickOpening(Math.Min(100, dt)); };
+            playbackTimer.Tick += delegate { double dt = clock.Elapsed.TotalMilliseconds; clock.Restart(); TickPlayback(Math.Min(100, dt)); TickOpening(Math.Min(100, dt)); SyncMedia(); };
             playerSettings = PlayerSettings.Load(project);
             progress = ExperienceProgress.Load(project);
             if (progress.visited != null) foreach (string item in progress.visited) visitedAll.Add(item);
@@ -903,11 +996,10 @@ namespace VisualNovelNativePlayer
 
         internal bool EntryUnlockedFor(string bucket, CollectionEntry entry)
         {
-            if (entry == null) return true;
-            if (String.IsNullOrWhiteSpace(entry.condition)) return true;
+            if (entry == null) return false;
             string ns = (bucket ?? "") + ":" + (entry.id ?? "");
             if (progress.unlocks.Contains(ns)) return true;
-            return Evaluate(entry.condition);
+            return (String.IsNullOrWhiteSpace(entry.sceneId) || readScenes.Contains(entry.sceneId)) && Evaluate(entry.condition);
         }
 
         private void SyncGalleryUnlocks()
@@ -920,8 +1012,8 @@ namespace VisualNovelNativePlayer
                 if (!project.experience.collections.TryGetValue(bucket, out list) || list == null) continue;
                 foreach (CollectionEntry entry in list)
                 {
-                    if (entry == null || String.IsNullOrWhiteSpace(entry.condition)) continue;
-                    if (Evaluate(entry.condition) && progress.unlocks.Add(bucket + ":" + (entry.id ?? ""))) changed = true;
+                    if (entry == null) continue;
+                    if (EntryUnlockedFor(bucket, entry) && progress.unlocks.Add(bucket + ":" + (entry.id ?? ""))) changed = true;
                 }
             }
             if (changed) { SaveProgressState(true); canvas.Invalidate(); }
@@ -963,7 +1055,7 @@ namespace VisualNovelNativePlayer
         {
             if (!ChapterSelectionEnabled) return false;
             if (String.IsNullOrEmpty(sceneId)) return false;
-            if (!readScenes.Contains(sceneId)) return false;
+            if (!EverVisited(sceneId)) return false;
             return project.scenes.Any(item => item.id == sceneId);
         }
         internal bool TryJumpToChapter(string sceneId)
@@ -971,7 +1063,7 @@ namespace VisualNovelNativePlayer
             if (!ChapterSelectionEnabled) { canvas.ShowNotice("章节选择未启用（体验设置）"); return false; }
             SceneData target = String.IsNullOrEmpty(sceneId) ? null : project.scenes.FirstOrDefault(item => item.id == sceneId);
             if (target == null) { canvas.ShowNotice("章节目标场景不存在"); return false; }
-            if (!readScenes.Contains(sceneId)) { canvas.ShowNotice("尚未读过该章节的场景"); return false; }
+            if (!EverVisited(sceneId)) { canvas.ShowNotice("尚未读过该章节的场景"); return false; }
             CloseOverlay();
             paused = false; skipping = automatic = false;
             ResetTiming();
@@ -1069,11 +1161,8 @@ namespace VisualNovelNativePlayer
             AddButton(strip, "快速读取", delegate { LoadProgress(); });
             strip.Items.Add(new ToolStripSeparator());
             AddButton(strip, "全屏", delegate { ToggleFullscreen(); });
-            ToolStripButton volumeUnsupported = new ToolStripButton("音量：本机播放器不支持音频");
-            volumeUnsupported.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            volumeUnsupported.Enabled = false;
-            volumeUnsupported.ForeColor = Color.FromArgb(118, 124, 146);
-            strip.Items.Add(volumeUnsupported);
+            AddButton(strip, "音量 −", delegate { SetMasterVolume(masterVolume - .1); });
+            AddButton(strip, "音量 +", delegate { SetMasterVolume(masterVolume + .1); });
             ToolStripLabel hint = new ToolStripLabel("  Space/Enter 继续 · Back 后退 · 数字键选择 · S 设置 · L 记录 · H 隐藏界面");
             hint.ForeColor = Color.FromArgb(177, 184, 205);
             strip.Items.Add(hint);
@@ -1198,8 +1287,8 @@ namespace VisualNovelNativePlayer
             if (CurrentDialogues().Count == 0) ShowOutcome();
             else
             {
-                if (hadScene && AutosaveEnabled) WriteAutosave();
-                SaveProgressState(false);
+                if (AutosaveEnabled) WriteAutosave();
+                SaveProgressState(true);
             }
             SyncGalleryUnlocks();
             canvas.Invalidate();
