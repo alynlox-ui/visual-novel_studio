@@ -3611,6 +3611,13 @@ const tutorialSteps=[
   {target:'#btnUiSettings',title:'8 / 9　调整游戏界面',text:'UI 设置可实时预览文本框、角色名牌、选项区和点击提示，并提供粉白、深色、纸张、极简四套预设。'},
   {target:'#btnAi',title:'9 / 9　使用 AI 辅助',text:'AI 辅助支持图像、视频和文本生成。可分别配置兼容 API，并把结果应用到背景、立绘、CG 或台词。最后点击运行测试试玩。'}
 ];
+const guideTargets=['#projectMenuButton','#canvasWrap','#designMenuButton','#btnAbcdDialogue','#btnCharModule','#btnAssets','#btnAbcdHomeMenu','#btnAbcdCollections','#btnAbcdChapters','#btnPlay','#btnAudit','#btnAi','#btnExportPlay'];
+document.querySelectorAll('#detailedBeginnerGuide > details').forEach((topic,i)=>{
+  const title=topic.querySelector('summary').textContent;
+  const notes=topic.querySelector('p');
+  topic.querySelectorAll('ol > li').forEach((li,j)=>tutorialSteps.push({target:guideTargets[i]||'#btnHelp',title:title+' · 操作 '+(j+1),text:li.textContent+(notes?'\n\n检查与提示：'+notes.textContent:'')}));
+});
+tutorialSteps.forEach(step=>{step.title=step.title.replace(/^\d+ \/ 9\s*/, '');});
 let tutorialIndex=0;
 function endTutorial(){
   $('#tutorialCard').classList.add('hidden');$('#tutorialSpotlight').classList.add('hidden');
@@ -3628,7 +3635,11 @@ function positionTutorial(){
   card.style.left=Math.max(14,left)+'px';card.style.top=Math.max(14,top)+'px';
 }
 function renderTutorial(){
-  const step=tutorialSteps[tutorialIndex];$('#tutorialTitle').textContent=step.title;$('#tutorialText').textContent=step.text;
+  const step=tutorialSteps[tutorialIndex];
+  document.querySelectorAll('.feature-menu-panel').forEach(p=>{p.classList.add('hidden');const trigger=document.querySelector('[aria-controls="'+p.id+'"]');if(trigger)trigger.setAttribute('aria-expanded','false');});
+  const target=$(step.target),menu=target&&target.closest('.feature-menu-panel');
+  if(menu){const trigger=document.querySelector('[aria-controls="'+menu.id+'"]');if(trigger)trigger.click();}
+  $('#tutorialTitle').textContent=step.title;$('#tutorialText').textContent=step.text;
   $('#tutorialStepLabel').textContent='功能导览 · '+(tutorialIndex+1)+' / '+tutorialSteps.length;
   $('#tutorialProgressBar').style.width=((tutorialIndex+1)/tutorialSteps.length*100)+'%';
   $('#tutorialPrev').disabled=tutorialIndex===0;$('#tutorialNext').textContent=tutorialIndex===tutorialSteps.length-1?'完成':'下一步';
@@ -3638,7 +3649,7 @@ function startTutorial(){
   $('#helpModal').classList.add('hidden');tutorialIndex=0;renderTutorial();
 }
 function initTutorial(){
-  $('#btnHelp').onclick=startTutorial;$('#btnHelpTutorial').onclick=startTutorial;$('#tutorialNext').onclick=()=>{if(tutorialIndex>=tutorialSteps.length-1)endTutorial();else{tutorialIndex++;renderTutorial();}};
+  $('#btnHelp').onclick=()=>{endTutorial();$('#helpModal').classList.remove('hidden');};$('#btnHelpTutorial').onclick=startTutorial;$('#tutorialNext').onclick=()=>{if(tutorialIndex>=tutorialSteps.length-1)endTutorial();else{tutorialIndex++;renderTutorial();}};
   $('#tutorialPrev').onclick=()=>{if(tutorialIndex>0){tutorialIndex--;renderTutorial();}};$('#tutorialSkip').onclick=endTutorial;
   window.addEventListener('resize',()=>{if(!$('#tutorialCard').classList.contains('hidden'))positionTutorial();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#tutorialCard').classList.contains('hidden')){e.preventDefault();endTutorial();}});
