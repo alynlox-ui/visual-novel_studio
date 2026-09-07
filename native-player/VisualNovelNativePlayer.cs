@@ -573,7 +573,7 @@ namespace VisualNovelNativePlayer
     internal enum OverlayAction
     {
         None, SpeedSlow, SpeedStandard, SpeedFast, SpeedInstant, Close,
-        GalleryTab, GalleryScrollUp, GalleryScrollDown, ChapterJump, ChaptersScrollUp, ChaptersScrollDown
+        GalleryPlay, GalleryTab, GalleryScrollUp, GalleryScrollDown, ChapterJump, ChaptersScrollUp, ChaptersScrollDown
     }
 
     internal sealed class HomeMenuItem
@@ -682,7 +682,7 @@ namespace VisualNovelNativePlayer
         internal string TextSpeedLabel() { return playerSettings.SpeedLabel(); }
         internal bool UiHidden { get { return uiHidden; } }
         public int ReadScenesCount { get { return readScenes.Count; } }
-        internal const string MusicUnsupportedMessage = "音频不支持：本播放器基于 WinForms/GDI+，不含音频引擎，音乐鉴赏条目仅作收藏展示，无法试听。";
+        internal const string MusicUnsupportedMessage = "点击已解锁曲目试听；切换分类或关闭画廊停止。格式取决于 Windows 编解码器。";
         internal static readonly string[] GalleryBucketKeys = { "cgs", "music", "endings", "achievements" };
         internal static readonly string[] GalleryBucketLabels = { "CG 画廊", "音乐鉴赏", "结局收藏", "成就" };
         private static readonly string[] TitleMenuKeys = { "start", "continue", "load", "gallery", "settings", "chapters" };
@@ -694,7 +694,7 @@ namespace VisualNovelNativePlayer
         private int galleryScrollStep, chaptersScrollStep;
         private bool openingVisible, openingClosing;
         private double openingAlpha, openingHoldRemaining;
-        private readonly NativeMedia bgmMedia = new NativeMedia(), voiceMedia = new NativeMedia(), videoMedia = new NativeMedia();
+        private readonly NativeMedia bgmMedia = new NativeMedia(), voiceMedia = new NativeMedia(), videoMedia = new NativeMedia(), galleryMedia = new NativeMedia();
         private string mediaSceneKey = null, mediaLineKey = null;
         private double masterVolume = 1;
         private Panel videoPanel;
@@ -767,7 +767,7 @@ namespace VisualNovelNativePlayer
         }
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { playbackTimer.Dispose(); bgmMedia.Dispose(); voiceMedia.Dispose(); videoMedia.Dispose(); }
+            if (disposing) { playbackTimer.Dispose(); bgmMedia.Dispose(); voiceMedia.Dispose(); videoMedia.Dispose(); galleryMedia.Dispose(); }
             base.Dispose(disposing);
         }
         private int revealed;
@@ -910,6 +910,7 @@ namespace VisualNovelNativePlayer
         internal void CloseOverlay()
         {
             if (Overlay == PlayerOverlay.None) return;
+            galleryMedia.Close();
             Overlay = PlayerOverlay.None;
             paused = pausedBeforeOverlay;
             canvas.Invalidate();
@@ -924,7 +925,8 @@ namespace VisualNovelNativePlayer
                 case OverlayAction.SpeedFast: SetTextSpeed(15); break;
                 case OverlayAction.SpeedInstant: SetTextSpeed(0); break;
                 case OverlayAction.Close: CloseOverlay(); break;
-                case OverlayAction.GalleryTab: SetGalleryBucket(payload); break;
+                case OverlayAction.GalleryPlay: PlayGalleryMusic(payload); break;
+                case OverlayAction.GalleryTab: galleryMedia.Close(); SetGalleryBucket(payload); break;
                 case OverlayAction.GalleryScrollUp: AdjustGalleryScroll(-1); break;
                 case OverlayAction.GalleryScrollDown: AdjustGalleryScroll(+1); break;
                 case OverlayAction.ChapterJump: JumpToChapterAt(payload); break;
@@ -2056,7 +2058,8 @@ namespace VisualNovelNativePlayer
                         if (entry == null) continue;
                         RectangleF tile = new RectangleF(clip.X + col * (tileWidth + gap), clip.Y + (row - offset) * (tileHeight + gap), tileWidth, tileHeight);
                         bool unlocked = game.EntryUnlockedFor(bucketKey, entry);
-                        float alpha = (isMusic || !unlocked) ? .62f : 1f;
+                        if (isMusic && unlocked) RegisterOverlayZone(tile, OverlayAction.GalleryPlay, entryIndex);
+                        float alpha = !unlocked ? .62f : 1f;
                         Color tileColor = unlocked ? Color.FromArgb(45, 51, 71) : Color.FromArgb(34, 38, 52);
                         FillRoundRect(g, tile, 10, tileColor);
                         using (Pen pen = new Pen(unlocked ? Color.FromArgb(251, 114, 153) : Color.FromArgb(86, 92, 112), 1.3f)) DrawRoundRect(g, pen, tile, 10);
@@ -2092,7 +2095,7 @@ namespace VisualNovelNativePlayer
                         {
                             using (Font font = new Font("Microsoft YaHei UI", 11, FontStyle.Regular, GraphicsUnit.Pixel))
                             using (Brush brush = new SolidBrush(Color.FromArgb(190, 148, 155, 178)))
-                                g.DrawString("音频不支持", font, brush, imageArea.X + 2, imageArea.Y + 2);
+                                g.DrawString(unlocked ? "点击试听" : "未解锁", font, brush, imageArea.X + 2, imageArea.Y + 2);
                         }
                         string title = entry.title ?? "";
                         using (Font font = new Font("Microsoft YaHei UI", 12, FontStyle.Bold, GraphicsUnit.Pixel))
