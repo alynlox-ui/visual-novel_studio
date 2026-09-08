@@ -29,6 +29,7 @@ namespace VisualNovelNativePlayer
         {
             try
             {
+
                 Payload payload = PayloadReader.Read(Application.ExecutablePath);
                 string conditionTest = FindArgument(args, "--condition-self-test=");
                 if (!String.IsNullOrEmpty(conditionTest))
@@ -1222,6 +1223,9 @@ namespace VisualNovelNativePlayer
         public void StartGame()
         {
             paused = skipping = automatic = false; ResetTiming();
+            director.Reset();
+            chapterSnapshots.Clear();
+            mediaSceneKey = mediaLineKey = null;
             Overlay = PlayerOverlay.None;
             pausedBeforeOverlay = false;
             uiHidden = false;
@@ -1305,6 +1309,8 @@ namespace VisualNovelNativePlayer
             dialogueIndex = 0;
             ResetTiming();
             mode = PlayerMode.Playing;
+            director.Line(CurrentLineKey());
+            director.Reveal(CurrentDialogue, 0);
             LogCurrentLineIfNew();
             VisibleChoices = new List<ChoiceData>();
             canvas.SceneChanged();
@@ -1332,6 +1338,7 @@ namespace VisualNovelNativePlayer
                 dialogueIndex++;
                 ResetTiming();
                 director.Line(CurrentLineKey());
+                director.Reveal(CurrentDialogue, 0);
                 LogCurrentLineIfNew();
                 canvas.SceneChanged();
                 canvas.Invalidate();
@@ -1361,9 +1368,18 @@ namespace VisualNovelNativePlayer
                 canvas.Invalidate();
                 return;
             }
+            PlayerSnapshot beforeFlow = CaptureSnapshot();
+            string flowTarget;
+            try { flowTarget = director.Flow(scene, flags); }
+            catch (Exception ex) { mode = PlayerMode.Ending; endingTitle = ex.Message; canvas.Invalidate(); return; }
             AutoBranchData branch = scene.autoBranches.FirstOrDefault(item => Evaluate(item.cond));
-            string target = branch == null ? scene.next : branch.target;
-            if (!String.IsNullOrEmpty(target)) EnterScene(target, null, true);
+            string target = flowTarget ?? (branch == null ? scene.next : branch.target);
+            if (!String.IsNullOrEmpty(target))
+            {
+                if (++transitionDepth > 128) { transitionDepth--; mode = PlayerMode.Ending; endingTitle = "场景自动跳转超过 128 次"; canvas.Invalidate(); return; }
+                try { history.Add(beforeFlow); EnterScene(target, null, false); }
+                finally { transitionDepth--; }
+            }
             else
             {
                 mode = PlayerMode.Ending;
@@ -1378,7 +1394,7 @@ namespace VisualNovelNativePlayer
             skipping = automatic = false;
             if (mode != PlayerMode.Choices || VisibleChoices == null || index < 0 || index >= VisibleChoices.Count) return;
             ChoiceData choice = VisibleChoices[index];
-            if (!Evaluate(choice.enableCond)) { canvas.ShowNotice(String.IsNullOrEmpty(choice.disabledReason) ? "选项不可用" : choice.disabledReason); return; }
+            if (!ChoiceEnabled(choice)) { canvas.ShowNotice(ChoiceCaption(choice)); return; }
             history.Add(CaptureSnapshot());
             EnterScene(choice.target, choice.setFlags, false);
         }
@@ -1392,9 +1408,11 @@ namespace VisualNovelNativePlayer
             RestoreSnapshot(snapshot);
         }
 
-        private PlayerSnapshot CaptureSnapshot()
+        internal PlayerSnapshot CaptureSnapshot()
         {
             return new PlayerSnapshot {
+                director = director.Snapshot(),
+                elapsed = elapsed, revealed = revealed,
                 sceneId = scene == null ? "" : scene.id,
                 dialogueIndex = dialogueIndex,
                 flags = new Dictionary<string, object>(flags),
@@ -1405,12 +1423,15 @@ namespace VisualNovelNativePlayer
             };
         }
 
-        private void RestoreSnapshot(PlayerSnapshot snapshot)
+        internal void RestoreSnapshot(PlayerSnapshot snapshot)
         {
             if (snapshot == null || !project.scenes.Any(s => s.id == snapshot.sceneId)) throw new InvalidDataException("存档场景不存在");
             paused = skipping = automatic = false; ResetTiming();
-            scene = project.scenes.FirstOrDefault(item => item.id == snapshot.sceneId);
+            scene = director.Restore(snapshot.director, project.scenes.FirstOrDefault(item => item.id == snapshot.sceneId));
             dialogueIndex = snapshot.dialogueIndex;
+            elapsed = snapshot.elapsed; revealed = snapshot.revealed;
+            director.Line(CurrentLineKey());
+            mediaSceneKey = mediaLineKey = null;
             flags.Clear();
             if (snapshot.flags != null) foreach (KeyValuePair<string, object> pair in snapshot.flags) flags[pair.Key] = pair.Value;
             readScenes.Clear();
@@ -1507,7 +1528,7 @@ namespace VisualNovelNativePlayer
         private bool Evaluate(string expression)
         {
             if (String.IsNullOrWhiteSpace(expression)) return true;
-            try { return new ConditionParser(expression, flags, readScenes, project.scenes.Count, unlockedEndings).ParseBoolean(); }
+            try { return new ConditionParser(expression, director.Scope(flags), readScenes, project.scenes.Count, unlockedEndings).ParseBoolean(); }
             catch { return false; }
         }
 
@@ -1524,7 +1545,8 @@ namespace VisualNovelNativePlayer
             return Regex.Replace(value ?? "", "\\{([^}]+)\\}", delegate(Match match) {
                 string key = match.Groups[1].Value.Trim();
                 object raw; double number;
-                return flags.TryGetValue(key, out raw) && Double.TryParse(Convert.ToString(raw, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out number) ? number.ToString("0.###", CultureInfo.InvariantCulture) : (flags.ContainsKey(key) ? Convert.ToString(raw, CultureInfo.InvariantCulture) : match.Value);
+                var scope = director.Scope(flags);
+                return scope.TryGetValue(key, out raw) && Double.TryParse(Convert.ToString(raw, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out number) ? number.ToString("0.###", CultureInfo.InvariantCulture) : (scope.ContainsKey(key) ? Convert.ToString(raw, CultureInfo.InvariantCulture) : match.Value);
             });
         }
 
@@ -1532,15 +1554,19 @@ namespace VisualNovelNativePlayer
         {
             if (character == null) return new VisualInfo();
             LibraryCharacterData library = String.IsNullOrEmpty(character.charId) ? null : project.characters.FirstOrDefault(item => item.id == character.charId);
-            if (library == null) return new VisualInfo { Name = character.name ?? "角色", Source = character.image ?? "" };
+            if (library == null) return new VisualInfo { Name = character.name ?? "角色", Source = director.Image(character, CurrentDialogue, PortraitSpeaking) };
             DialogueData dialogue = CurrentDialogue;
             string actionId = dialogue != null && dialogue.charId == character.id && !String.IsNullOrEmpty(dialogue.actionId) ? dialogue.actionId : character.actionId;
             string expressionId = dialogue != null && dialogue.charId == character.id && !String.IsNullOrEmpty(dialogue.expressionId) ? dialogue.expressionId : character.expressionId;
             CharacterImageData expression = library.expressions.FirstOrDefault(item => item.id == expressionId);
             CharacterActionData action = library.actions.FirstOrDefault(item => item.id == actionId);
             string source = expression != null && !String.IsNullOrEmpty(expression.image) ? expression.image : (action != null && !String.IsNullOrEmpty(action.image) ? action.image : library.baseImage);
-            return new VisualInfo { Name = library.name ?? character.name ?? "角色", Source = source ?? "" };
+            return new VisualInfo { Name = library.name ?? character.name ?? "角色", Source = director.Image(character, dialogue, PortraitSpeaking) };
         }
+
+        private bool PortraitSpeaking { get { return mode == PlayerMode.Playing && (revealed < DisplayText(CurrentDialogue == null ? "" : CurrentDialogue.text).Length || voiceMedia.Mode == "playing"); } }
+        internal bool ChoiceEnabled(ChoiceData choice) { return choice != null && Evaluate(choice.cond) && Evaluate(choice.enableCond); }
+        internal string ChoiceCaption(ChoiceData choice) { return DisplayText(choice.text) + (ChoiceEnabled(choice) ? "" : "  · " + DisplayText(String.IsNullOrEmpty(choice.disabledReason) ? "选项不可用" : choice.disabledReason)); }
 
         public bool IsSpeaking(SceneCharacterData character)
         {
@@ -1852,7 +1878,7 @@ namespace VisualNovelNativePlayer
         private void DrawDialogueAndChoices(Graphics g, Rectangle bounds)
         {
             choiceRects.Clear();
-            UiData ui = game.Project.ui;
+            UiData ui = game.RuntimeUi;
             DialogueData dialogue = game.CurrentDialogue;
             if (dialogue != null && ui.textbox.show)
             {
@@ -1880,7 +1906,7 @@ namespace VisualNovelNativePlayer
 
         private void DrawChoices(Graphics g, Rectangle bounds, IList<ChoiceData> choices)
         {
-            UiData ui = game.Project.ui;
+            UiData ui = game.RuntimeUi;
             if (!ui.choices.show) return;
             float width = Math.Min(680, bounds.Width * .66f);
             float height = 54;
@@ -1891,11 +1917,12 @@ namespace VisualNovelNativePlayer
             {
                 RectangleF rect = new RectangleF((bounds.Width - width) / 2, top + i * (height + gap), width, height);
                 choiceRects.Add(rect);
-                FillRoundRect(g, rect, 10, WithAlpha(ParseColor(ui.choices.bg, Color.White), ui.choices.opacity ?? .94));
+                bool enabled = game.ChoiceEnabled(choices[i]);
+                FillRoundRect(g, rect, 10, enabled ? WithAlpha(ParseColor(ui.choices.bg, Color.White), ui.choices.opacity ?? .94) : Color.FromArgb(210, 65, 65, 72));
                 using (Pen border = new Pen(ParseColor(ui.choices.border, Color.FromArgb(251, 114, 153)), 1.6f)) DrawRoundRect(g, border, rect, 10);
                 using (Font font = new Font("Microsoft YaHei UI", ui.choices.fontSize > 0 ? ui.choices.fontSize : 16, FontStyle.Bold, GraphicsUnit.Pixel))
-                using (Brush brush = new SolidBrush(ParseColor(ui.choices.color, Color.FromArgb(199, 92, 126))))
-                    DrawCentered(g, (i + 1).ToString() + "  " + game.DisplayText(choices[i].text), font, brush, rect);
+                using (Brush brush = new SolidBrush(enabled ? ParseColor(ui.choices.color, Color.FromArgb(199, 92, 126)) : Color.FromArgb(180, 180, 185)))
+                    DrawCentered(g, (i + 1).ToString() + "  " + game.ChoiceCaption(choices[i]), font, brush, rect);
             }
         }
 

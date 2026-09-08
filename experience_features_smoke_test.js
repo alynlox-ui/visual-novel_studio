@@ -4,6 +4,7 @@ const { installDomStubs } = require('./dom_stub.js');
 installDomStubs();
 const html = fs.readFileSync('index.html', 'utf8');
 const m = html.match(/<script>([\s\S]*?)<\/script>/);
+const rt = fs.readFileSync('director_runtime.js', 'utf8');
 if (!m) process.exit(1);
 let made = '';
 global.Blob = function (parts) { made = parts.join(''); };
@@ -50,10 +51,13 @@ const TEST = `
   ck('导出快捷键覆盖 隐藏/记录/设置/保存/数字选支', outHtml.includes("k==='h'")&&outHtml.includes("k==='b'")&&outHtml.includes("k==='o'")&&outHtml.includes("k==='s'")&&outHtml.includes('/^[1-9]$/.test(k)'));
   ck('导出含设置入口（顶栏+标题页）', outHtml.includes("button('settings','设置',settingsPanel)")&&outHtml.includes('titleSettings'));
   ck('导出项目数据完整', outHtml.includes(project.title)&&outHtml.includes('s_start'));
+  ck('导出内嵌真实导演运行时(非空桩)', outHtml.includes('function createDirector(project)')&&!outHtml.includes('function(){return null;}'));
+  ck('导出运行导演流程/逐字/移动/存档路径', outHtml.includes('director.line(')&&outHtml.includes('director.flow(sc,flags)')&&outHtml.includes('director.reveal(')&&outHtml.includes('director.tick(')&&outHtml.includes('director.snapshot()'));
   exportPlayable();
   ck('可玩 HTML 实际生成文件', made.startsWith('<!doctype html>')&&made.length>8000&&made.includes('vns_settings_')&&made.includes('gameVolume'), {bytes:made.length});
+  ck('生成文件内嵌真实导演运行时', made.includes('function createDirector(project)')&&!made.includes('function(){return null;}'), {bytes:made.length});
   fs.writeFileSync('playable_experience_output.html',made,'utf8');
  }catch(e){out.push('  ✗ FATAL '+e.stack)}
  console.log(out.join('\\n'));const f=out.filter(x=>x.includes('✗')).length;console.log('========== 试玩体验特性冒烟：'+(out.length-f)+' 通过 / '+f+' 失败 ==========');process.exit(f?1:0);
 })();`;
-try { eval(m[1] + '\n' + TEST); } catch (e) { console.error('EVAL/BOOT ERROR', e.stack); process.exit(1); }
+try { eval(rt + '\n' + m[1] + '\n' + TEST); } catch (e) { console.error('EVAL/BOOT ERROR', e.stack); process.exit(1); }
