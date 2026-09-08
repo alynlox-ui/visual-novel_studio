@@ -1,0 +1,1 @@
+const fs=require('fs'),assert=require('assert'),vm=require('vm');const s=fs.readFileSync(__dirname+'/director_editor.js','utf8');assert.doesNotThrow(()=>new vm.Script(s));for(const x of ['inheritStage','enableCond','mouthOpen','cues','templates','Escape','commitUndoSnapshot','saveEditor'])assert(s.includes(x),x);console.log('director_editor_test: PASS');

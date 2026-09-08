@@ -803,8 +803,10 @@ namespace VisualNovelNativePlayer
             if (paused || mode != PlayerMode.Playing) { if (mode != PlayerMode.Playing) skipping = automatic = false; return; }
             double speed = playerSettings.textSpeed <= 0 ? 1 : playerSettings.textSpeed;
             elapsed += milliseconds * playbackRate;
+            director.Tick(milliseconds * playbackRate);
             int length = DisplayText(CurrentDialogue == null ? "" : CurrentDialogue.text).Length;
             revealed = (skipping || playerSettings.textSpeed <= 0) ? length : Math.Min(length, (int)(elapsed / speed));
+            director.Reveal(CurrentDialogue, revealed);
             if (skipping && elapsed >= 140)
             {
                 if (SkipReadShouldStop())
@@ -1322,13 +1324,14 @@ namespace VisualNovelNativePlayer
             if (mode == PlayerMode.Title || mode == PlayerMode.Ending) { StartGame(); return; }
             if (mode == PlayerMode.Choices) return;
             int length = DisplayText(CurrentDialogue == null ? "" : CurrentDialogue.text).Length;
-            if (revealed < length) { revealed = length; elapsed = length * (playerSettings.textSpeed <= 0 ? 1 : playerSettings.textSpeed); canvas.Invalidate(); return; }
+            if (revealed < length) { revealed = length; elapsed = length * (playerSettings.textSpeed <= 0 ? 1 : playerSettings.textSpeed); director.Reveal(CurrentDialogue, length); canvas.Invalidate(); return; }
             List<DialogueData> list = CurrentDialogues();
             if (dialogueIndex < list.Count - 1)
             {
                 history.Add(CaptureSnapshot());
                 dialogueIndex++;
                 ResetTiming();
+                director.Line(CurrentLineKey());
                 LogCurrentLineIfNew();
                 canvas.SceneChanged();
                 canvas.Invalidate();
@@ -1375,6 +1378,7 @@ namespace VisualNovelNativePlayer
             skipping = automatic = false;
             if (mode != PlayerMode.Choices || VisibleChoices == null || index < 0 || index >= VisibleChoices.Count) return;
             ChoiceData choice = VisibleChoices[index];
+            if (!Evaluate(choice.enableCond)) { canvas.ShowNotice(String.IsNullOrEmpty(choice.disabledReason) ? "选项不可用" : choice.disabledReason); return; }
             history.Add(CaptureSnapshot());
             EnterScene(choice.target, choice.setFlags, false);
         }
