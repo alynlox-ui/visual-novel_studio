@@ -30,6 +30,8 @@ namespace VisualNovelNativePlayer
             try
             {
 
+                string directorTest = FindArgument(args, "--director-self-test=");
+                if (!String.IsNullOrEmpty(directorTest)) return DirectorSelfTest.Run(directorTest);
                 Payload payload = PayloadReader.Read(Application.ExecutablePath);
                 string conditionTest = FindArgument(args, "--condition-self-test=");
                 if (!String.IsNullOrEmpty(conditionTest))
@@ -306,6 +308,7 @@ namespace VisualNovelNativePlayer
     }
     internal sealed class ExperienceProgress
     {
+        public Dictionary<string, PlayerSnapshot> chapters { get; set; }
         public HashSet<string> unlocks { get; set; }
         public HashSet<string> visited { get; set; }
         public HashSet<string> readLines { get; set; }
@@ -317,6 +320,7 @@ namespace VisualNovelNativePlayer
         }
         private sealed class Dto
         {
+            public Dictionary<string, PlayerSnapshot> chapters { get; set; }
             public List<string> unlocks { get; set; }
             public List<string> visited { get; set; }
             public List<string> readLines { get; set; }
@@ -339,6 +343,7 @@ namespace VisualNovelNativePlayer
                     Dto dto = Json.Create().Deserialize<Dto>(File.ReadAllText(path, Encoding.UTF8));
                     if (dto != null)
                     {
+                        progress.chapters = dto.chapters;
                         if (dto.unlocks != null) foreach (string item in dto.unlocks) progress.unlocks.Add(item);
                         if (dto.visited != null) foreach (string item in dto.visited) progress.visited.Add(item);
                         if (dto.readLines != null) foreach (string item in dto.readLines) progress.readLines.Add(item);
@@ -355,7 +360,7 @@ namespace VisualNovelNativePlayer
                 List<string> unlockList = new List<string>(unlocks); unlockList.Sort(StringComparer.Ordinal);
                 List<string> visitedList = new List<string>(visited); visitedList.Sort(StringComparer.Ordinal);
                 List<string> readList = new List<string>(readLines); readList.Sort(StringComparer.Ordinal);
-                Dto dto = new Dto { unlocks = unlockList, visited = visitedList, readLines = readList };
+                Dto dto = new Dto { chapters = chapters, unlocks = unlockList, visited = visitedList, readLines = readList };
                 File.WriteAllText(FilePath(project), Json.Create().Serialize(dto), new UTF8Encoding(false));
             }
             catch { }
@@ -599,6 +604,7 @@ namespace VisualNovelNativePlayer
 
     internal sealed class PlayerSnapshot
     {
+        public List<PlayerSnapshot> history { get; set; }
         public DirectorState director { get; set; }
         public List<BacklogEntry> backlog { get; set; }
         public double elapsed { get; set; }
@@ -888,6 +894,7 @@ namespace VisualNovelNativePlayer
             playbackTimer.Tick += delegate { double dt = clock.Elapsed.TotalMilliseconds; clock.Restart(); TickPlayback(Math.Min(100, dt)); TickOpening(Math.Min(100, dt)); SyncMedia(); };
             playerSettings = PlayerSettings.Load(project);
             progress = ExperienceProgress.Load(project);
+            if (progress.chapters != null) foreach (var pair in progress.chapters) chapterSnapshots[pair.Key] = pair.Value;
             if (progress.visited != null) foreach (string item in progress.visited) visitedAll.Add(item);
             if (progress.readLines != null) foreach (string item in progress.readLines) readLines.Add(item);
             playbackTimer.Start();
@@ -912,7 +919,7 @@ namespace VisualNovelNativePlayer
             if (readLines.Add(key)) progressDirtySinceSave++;
             string text = DisplayText(dialogue.text ?? "");
             if (String.IsNullOrEmpty(text) && String.IsNullOrEmpty(dialogue.speaker)) return;
-            backlog.Add(new BacklogEntry { speaker = dialogue.speaker ?? "", text = text, sceneId = scene.id });
+            backlog.Add(new BacklogEntry { director = director.Snapshot(), speaker = DisplayText(dialogue.speaker ?? ""), text = text, sceneId = scene.id });
             if (backlog.Count > 500) backlog.RemoveRange(0, backlog.Count - 500);
         }
 
@@ -1060,6 +1067,7 @@ namespace VisualNovelNativePlayer
                     HashSet<string>.Enumerator enumerator = progress.readLines.GetEnumerator();
                     while (progress.readLines.Count > 8000 && enumerator.MoveNext()) progress.readLines.Remove(enumerator.Current);
                 }
+                progress.chapters = new Dictionary<string, PlayerSnapshot>(chapterSnapshots);
                 progress.Save(project);
                 progressDirtySinceSave = 0;
             }
@@ -1091,8 +1099,14 @@ namespace VisualNovelNativePlayer
             if (!EverVisited(sceneId)) { canvas.ShowNotice("尚未读过该章节的场景"); return false; }
             CloseOverlay();
             paused = false; skipping = automatic = false;
-            ResetTiming();
-            EnterScene(sceneId, null, true);
+            PlayerSnapshot entry;
+            if (chapterSnapshots.TryGetValue(sceneId, out entry))
+            {
+                if (scene != null) history.Add(CaptureSnapshot());
+                RestoreSnapshot(entry);
+                if (AutosaveEnabled) WriteAutosave();
+            }
+            else EnterScene(sceneId, null, true);
             canvas.ShowNotice("已跳转到章节");
             return true;
         }
@@ -1133,7 +1147,7 @@ namespace VisualNovelNativePlayer
         private void WriteAutosave()
         {
             if (scene == null || mode == PlayerMode.Title) return;
-            try { File.WriteAllText(AutosaveFilePath, Json.Create().Serialize(CaptureSnapshot()), new UTF8Encoding(false)); }
+            try { File.WriteAllText(AutosaveFilePath, Json.Create().Serialize(CaptureSaveSnapshot()), new UTF8Encoding(false)); }
             catch { }
         }
 
@@ -1224,7 +1238,7 @@ namespace VisualNovelNativePlayer
         {
             paused = skipping = automatic = false; ResetTiming();
             director.Reset();
-            chapterSnapshots.Clear();
+            playbackRate = 1;
             mediaSceneKey = mediaLineKey = null;
             Overlay = PlayerOverlay.None;
             pausedBeforeOverlay = false;
@@ -1314,6 +1328,7 @@ namespace VisualNovelNativePlayer
             LogCurrentLineIfNew();
             VisibleChoices = new List<ChoiceData>();
             canvas.SceneChanged();
+            chapterSnapshots[scene.id] = CaptureSnapshot();
             if (CurrentDialogues().Count == 0) ShowOutcome();
             else
             {
@@ -1412,6 +1427,7 @@ namespace VisualNovelNativePlayer
         {
             return new PlayerSnapshot {
                 director = director.Snapshot(),
+                backlog = DirectorRuntime.Copy(backlog), playbackRate = playbackRate,
                 elapsed = elapsed, revealed = revealed,
                 sceneId = scene == null ? "" : scene.id,
                 dialogueIndex = dialogueIndex,
@@ -1423,13 +1439,24 @@ namespace VisualNovelNativePlayer
             };
         }
 
+        private PlayerSnapshot CaptureSaveSnapshot()
+        {
+            var snapshot = CaptureSnapshot();
+            snapshot.history = DirectorRuntime.Copy(history);
+            return snapshot;
+        }
+
         internal void RestoreSnapshot(PlayerSnapshot snapshot)
         {
             if (snapshot == null || !project.scenes.Any(s => s.id == snapshot.sceneId)) throw new InvalidDataException("存档场景不存在");
+            if (snapshot.history != null) { history.Clear(); history.AddRange(DirectorRuntime.Copy(snapshot.history)); }
             paused = skipping = automatic = false; ResetTiming();
             scene = director.Restore(snapshot.director, project.scenes.FirstOrDefault(item => item.id == snapshot.sceneId));
             dialogueIndex = snapshot.dialogueIndex;
             elapsed = snapshot.elapsed; revealed = snapshot.revealed;
+            playbackRate = snapshot.playbackRate > 0 ? snapshot.playbackRate : 1;
+            backlog.Clear();
+            if (snapshot.backlog != null) backlog.AddRange(DirectorRuntime.Copy(snapshot.backlog));
             director.Line(CurrentLineKey());
             mediaSceneKey = mediaLineKey = null;
             flags.Clear();
@@ -1453,7 +1480,7 @@ namespace VisualNovelNativePlayer
         private void SaveProgress()
         {
             if (scene == null || mode == PlayerMode.Title) return;
-            File.WriteAllText(SavePath(0), Json.Create().Serialize(CaptureSnapshot()), new UTF8Encoding(false));
+            File.WriteAllText(SavePath(0), Json.Create().Serialize(CaptureSaveSnapshot()), new UTF8Encoding(false));
             canvas.ShowNotice("进度已保存");
         }
 
@@ -1497,7 +1524,7 @@ namespace VisualNovelNativePlayer
                     button.Click += delegate {
                         try {
                             if (loading) { if (!File.Exists(path)) return; RestoreSnapshot(Json.Create().Deserialize<PlayerSnapshot>(File.ReadAllText(path, Encoding.UTF8))); wasPaused = false; }
-                            else { if (scene == null || mode == PlayerMode.Title) return; File.WriteAllText(path, Json.Create().Serialize(CaptureSnapshot()), new UTF8Encoding(false)); }
+                            else { if (scene == null || mode == PlayerMode.Title) return; File.WriteAllText(path, Json.Create().Serialize(CaptureSaveSnapshot()), new UTF8Encoding(false)); }
                             dialog.Close();
                         } catch (Exception ex) { MessageBox.Show(dialog, ex.Message, "存档失败"); }
                     };
@@ -1891,7 +1918,7 @@ namespace VisualNovelNativePlayer
                     RectangleF badge = new RectangleF(panel.X + 22, panel.Y - 17, Math.Min(260, 42 + dialogue.speaker.Length * 18), 34);
                     FillRoundRect(g, badge, 17, ParseColor(ui.speaker.bg, Color.FromArgb(251, 114, 153)));
                     using (Font speakerFont = new Font("Microsoft YaHei UI", ui.speaker.fontSize > 0 ? ui.speaker.fontSize : 14, FontStyle.Bold, GraphicsUnit.Pixel))
-                    using (Brush speakerBrush = new SolidBrush(ParseColor(ui.speaker.color, Color.White))) DrawCentered(g, dialogue.speaker, speakerFont, speakerBrush, badge);
+                    using (Brush speakerBrush = new SolidBrush(ParseColor(ui.speaker.color, Color.White))) DrawCentered(g, game.DisplayText(dialogue.speaker), speakerFont, speakerBrush, badge);
                 }
                 RectangleF textRect = new RectangleF(panel.X + 25, panel.Y + 32, panel.Width - 50, panel.Height - 58);
                 using (Font textFont = new Font("Microsoft YaHei UI", ui.textbox.fontSize > 0 ? ui.textbox.fontSize : 20, FontStyle.Regular, GraphicsUnit.Pixel))

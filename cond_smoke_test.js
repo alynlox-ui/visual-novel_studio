@@ -84,7 +84,7 @@ const TEST = `
 })();
 `;
 try {
-  eval(m[1] + '\n' + TEST);
+  eval(fs.readFileSync('director_runtime.js', 'utf8') + '\n' + m[1] + '\n' + TEST);
 } catch (e) {
   console.error('EVAL/BOOT ERROR:', e.stack);
   process.exit(1);

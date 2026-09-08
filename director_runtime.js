@@ -63,7 +63,7 @@ function createDirector(project) {
     return p.mouthClosed||base;
   }
   function snapshot(){return copy(state);}
-  function restore(value,sc){reset();if(value&&value.version===1){state=copy(value);state.locals=state.locals||{};state.stack=state.stack||[];state.moves=state.moves||{};state.applied=state.applied||[];}else if(sc)enter(sc);return state.stage;}
+  function restore(value,sc){reset();if(value&&value.version===1&&value.stage&&(!sc||value.sceneId===sc.id)){state=copy(value);state.locals=state.locals||{};state.stack=state.stack||[];state.moves=state.moves||{};state.applied=state.applied||[];}else if(sc)enter(sc);return state.stage;}
   return {reset,scope,interpolate,theme,ui,enter,flow,line,reveal,tick,image,snapshot,restore,get stage(){return state.stage;},get state(){return state;}};
 }
 if(typeof module!=='undefined'&&module.exports)module.exports={createDirector};

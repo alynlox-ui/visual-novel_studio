@@ -4,3 +4,5 @@ dist/
 artifacts/
 native-player/dist/*
 !native-player/dist/visual-novel-native.exe
+playable_experience_output.html
+.qa/
