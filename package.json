@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test:director": "node director_editor_test.js && node director_browser_test.js && node director_native_test.js",
+    "test:director": "node director_navigation_test.js && node director_editor_test.js && node director_browser_test.js && node director_native_test.js",
     "test": "node debug_workbench_test.js && node collaboration_store_test.js && node release_check.js && node http_verification_run.js && node cond_smoke_test.js && node export_game_smoke_test.js && node experience_features_smoke_test.js && node native_export_integration_test.js && npm run test:director",
     "build:native-player": "cmd.exe /d /c native-player\\build.cmd",
     "build:web": "node build_release.js web",
