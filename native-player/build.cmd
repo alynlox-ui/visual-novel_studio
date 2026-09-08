@@ -8,7 +8,7 @@ if not exist "%CSC%" (
   exit /b 1
 )
 if not exist "%ROOT%dist" mkdir "%ROOT%dist"
-"%CSC%" /nologo /target:winexe /platform:x64 /optimize+ /debug- /out:"%ROOT%dist\visual-novel-native.exe" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll "%ROOT%VisualNovelNativePlayer.cs" "%ROOT%NativeMedia.cs"
+"%CSC%" /nologo /target:winexe /platform:x64 /optimize+ /debug- /out:"%ROOT%dist\visual-novel-native.exe" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll "%ROOT%VisualNovelNativePlayer.cs" "%ROOT%NativeMedia.cs" "%ROOT%DirectorRuntime.cs"
 if errorlevel 1 exit /b %errorlevel%
 echo Built: %ROOT%dist\visual-novel-native.exe
 endlocal

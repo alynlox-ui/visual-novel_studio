@@ -83,7 +83,7 @@ namespace VisualNovelNativePlayer
 
         private static void WriteConditionSelfTest(string path, ProjectData project)
         {
-            Dictionary<string, double> flags = new Dictionary<string, double>();
+            Dictionary<string, object> flags = new Dictionary<string, object>();
             HashSet<string> read = new HashSet<string>();
             read.Add(project.startScene ?? "");
             HashSet<string> endings = new HashSet<string> { "good|Native End" };
@@ -260,6 +260,7 @@ namespace VisualNovelNativePlayer
     #region Project model
     public sealed class ProjectData
     {
+        public DirectorData director { get; set; }
         public ExperienceData experience { get; set; }
         public HomeData home { get; set; }
         public string id { get; set; }
@@ -377,6 +378,9 @@ namespace VisualNovelNativePlayer
     }
     public sealed class SceneData
     {
+        public InheritStageData inheritStage { get; set; }
+        public FlowData flow { get; set; }
+        public string themeId { get; set; }
         public string id { get; set; }
         public string name { get; set; }
         public string bg { get; set; }
@@ -398,6 +402,7 @@ namespace VisualNovelNativePlayer
 
     public sealed class DialogueData
     {
+        public List<CueData> cues { get; set; }
         public string speaker { get; set; }
         public string text { get; set; }
         public string charId { get; set; }
@@ -408,6 +413,8 @@ namespace VisualNovelNativePlayer
 
     public sealed class ChoiceData
     {
+        public string enableCond { get; set; }
+        public string disabledReason { get; set; }
         public string id { get; set; }
         public string text { get; set; }
         public string target { get; set; }
@@ -436,6 +443,7 @@ namespace VisualNovelNativePlayer
 
     public sealed class SceneCharacterData
     {
+        public PortraitData portrait { get; set; }
         public string id { get; set; }
         public string name { get; set; }
         public string image { get; set; }
@@ -451,6 +459,7 @@ namespace VisualNovelNativePlayer
 
     public sealed class LibraryCharacterData
     {
+        public PortraitData portrait { get; set; }
         public string id { get; set; }
         public string name { get; set; }
         public string baseImage { get; set; }
@@ -589,9 +598,14 @@ namespace VisualNovelNativePlayer
 
     internal sealed class PlayerSnapshot
     {
+        public DirectorState director { get; set; }
+        public List<BacklogEntry> backlog { get; set; }
+        public double elapsed { get; set; }
+        public int revealed { get; set; }
+        public double playbackRate { get; set; }
         public string sceneId { get; set; }
         public int dialogueIndex { get; set; }
-        public Dictionary<string, double> flags { get; set; }
+        public Dictionary<string, object> flags { get; set; }
         public List<string> readScenes { get; set; }
         public List<string> unlockedEndings { get; set; }
         public string mode { get; set; }
@@ -606,6 +620,7 @@ namespace VisualNovelNativePlayer
 
     internal sealed class BacklogEntry
     {
+        public DirectorState director { get; set; }
         public string speaker { get; set; }
         public string text { get; set; }
         public string sceneId { get; set; }
@@ -659,9 +674,13 @@ namespace VisualNovelNativePlayer
     internal sealed class GameForm : Form
     {
         private readonly ProjectData project;
+        private DirectorRuntime director;
+        private int transitionDepth;
+        private readonly Dictionary<string, PlayerSnapshot> chapterSnapshots = new Dictionary<string, PlayerSnapshot>();
+        internal UiData RuntimeUi { get { return director.Ui(); } }
         private readonly GameCanvas canvas;
         private readonly ToolStrip toolbar;
-        private readonly Dictionary<string, double> flags = new Dictionary<string, double>();
+        private readonly Dictionary<string, object> flags = new Dictionary<string, object>();
         private readonly List<PlayerSnapshot> history = new List<PlayerSnapshot>();
         private readonly HashSet<string> readScenes = new HashSet<string>();
         private readonly HashSet<string> unlockedEndings = new HashSet<string>();
@@ -840,9 +859,10 @@ namespace VisualNovelNativePlayer
         private FormBorderStyle previousBorder;
         private FormWindowState previousState;
 
-        public GameForm(ProjectData value)
+        internal GameForm(ProjectData value)
         {
             project = value;
+            director = new DirectorRuntime(project);
             ModelDefaults.Apply(project);
             Text = project.title + " - Visual Novel";
             StartPosition = FormStartPosition.CenterScreen;
@@ -1185,7 +1205,7 @@ namespace VisualNovelNativePlayer
         public SceneData CurrentScene { get { return scene; } }
         public PlayerMode Mode { get { return mode; } }
         public string EndingTitle { get { return endingTitle; } }
-        public IDictionary<string, double> Flags { get { return flags; } }
+        public IDictionary<string, object> Flags { get { return flags; } }
         public IList<ChoiceData> VisibleChoices { get; private set; }
 
         public DialogueData CurrentDialogue
@@ -1206,7 +1226,7 @@ namespace VisualNovelNativePlayer
             toolbar.Visible = true;
             flags.Clear();
             if (project.flags != null)
-                foreach (KeyValuePair<string, object> pair in project.flags) flags[pair.Key] = ConvertNumber(pair.Value);
+                foreach (KeyValuePair<string, object> pair in project.flags) flags[pair.Key] = pair.Value;
             history.Clear();
             readScenes.Clear();
             endingTitle = "";
@@ -1276,7 +1296,7 @@ namespace VisualNovelNativePlayer
             }
             if (remember && scene != null) history.Add(CaptureSnapshot());
             if (choiceOperations != null) ApplyOperations(choiceOperations);
-            scene = target;
+            try { scene = director.Enter(target); } catch (Exception ex) { endingTitle = ex.Message; mode = PlayerMode.Ending; canvas.Invalidate(); return; }
             readScenes.Add(scene.id ?? "");
             if (visitedAll.Add(scene.id ?? "")) progressDirtySinceSave++;
             ApplyOperations(scene.setFlags);
@@ -1373,7 +1393,7 @@ namespace VisualNovelNativePlayer
             return new PlayerSnapshot {
                 sceneId = scene == null ? "" : scene.id,
                 dialogueIndex = dialogueIndex,
-                flags = new Dictionary<string, double>(flags),
+                flags = new Dictionary<string, object>(flags),
                 readScenes = readScenes.ToList(),
                 unlockedEndings = unlockedEndings.ToList(),
                 mode = mode.ToString(),
@@ -1388,7 +1408,7 @@ namespace VisualNovelNativePlayer
             scene = project.scenes.FirstOrDefault(item => item.id == snapshot.sceneId);
             dialogueIndex = snapshot.dialogueIndex;
             flags.Clear();
-            if (snapshot.flags != null) foreach (KeyValuePair<string, double> pair in snapshot.flags) flags[pair.Key] = pair.Value;
+            if (snapshot.flags != null) foreach (KeyValuePair<string, object> pair in snapshot.flags) flags[pair.Key] = pair.Value;
             readScenes.Clear();
             if (snapshot.readScenes != null) foreach (string item in snapshot.readScenes) readScenes.Add(item);
             unlockedEndings.Clear();
@@ -1469,8 +1489,7 @@ namespace VisualNovelNativePlayer
             foreach (FlagOperationData operation in operations)
             {
                 if (operation == null || String.IsNullOrEmpty(operation.flag)) continue;
-                double current;
-                if (!flags.TryGetValue(operation.flag, out current)) current = 0;
+                object raw; double current = flags.TryGetValue(operation.flag, out raw) ? ConvertNumber(raw) : 0;
                 string op = operation.op ?? "=";
                 if (op == "+") current += operation.value;
                 else if (op == "-") current -= operation.value;
@@ -1500,8 +1519,8 @@ namespace VisualNovelNativePlayer
         {
             return Regex.Replace(value ?? "", "\\{([^}]+)\\}", delegate(Match match) {
                 string key = match.Groups[1].Value.Trim();
-                double number;
-                return flags.TryGetValue(key, out number) ? number.ToString("0.###", CultureInfo.InvariantCulture) : match.Value;
+                object raw; double number;
+                return flags.TryGetValue(key, out raw) && Double.TryParse(Convert.ToString(raw, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out number) ? number.ToString("0.###", CultureInfo.InvariantCulture) : (flags.ContainsKey(key) ? Convert.ToString(raw, CultureInfo.InvariantCulture) : match.Value);
             });
         }
 
@@ -2480,14 +2499,14 @@ namespace VisualNovelNativePlayer
     internal sealed class ConditionParser
     {
         private readonly string source;
-        private readonly IDictionary<string, double> flags;
+        private readonly IDictionary<string, object> flags;
         private readonly ISet<string> readScenes;
         private readonly int projectSceneCount;
         private readonly ISet<string> unlockedEndings;
         private int position;
         private static readonly Random Randomizer = new Random();
 
-        public ConditionParser(string expression, IDictionary<string, double> values, ISet<string> scenes, int sceneCount, ISet<string> endings)
+        public ConditionParser(string expression, IDictionary<string, object> values, ISet<string> scenes, int sceneCount, ISet<string> endings)
         {
             source = expression ?? "";
             flags = values;
@@ -2598,7 +2617,7 @@ namespace VisualNovelNativePlayer
                 }
                 return Call(identifier, args);
             }
-            double flagValue;
+            object flagValue;
             return flags.TryGetValue(identifier, out flagValue) ? flagValue : 0d;
         }
 
